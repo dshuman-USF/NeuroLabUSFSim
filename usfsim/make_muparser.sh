@@ -1,0 +1,5 @@
+#!/bin/bash
+export MAKEFLAGS="CXXFLAGS+=-DMUPARSER_DLL CXXFLAGS+=-DMUPARSERLIB_EXPORTS"
+make MXE_TARGETS=x86_64-w64-mingw32.static muparser
+export MAKEFLAGS=
+
