@@ -73,10 +73,12 @@ extern char  snedfile[1024];  /* default file name holder          */
 
 /*   spawn system area variables to follow ******************************/
 
-extern int		bdt_flag;
-extern int		smr_flag;
-extern int		analog_flag;
-extern int		condi_flag;
+//extern int		bdt_flag;
+//extern int		wave_flag;
+//extern int		smr_flag;
+//extern int		smr_wave_flag;
+//extern int		analog_flag;
+//extern int		condi_flag;
 extern int		currModel;
 
 // analog arrays

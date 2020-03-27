@@ -1,3 +1,19 @@
+2020-03-27  dshuman@usf.edu
+
+	* configure.ac: Bump to version 1.0.24.
+
+2020-03-25  dshuman@usf.edu
+
+	* simrun_wrap.cpp: add in support for saving waveform data to a .smr file.
+	* simloop.c: ditto.
+	* sim.c: ditto.
+
+2020-03-12  dshuman@usf.edu
+
+	* simviewer_impl.cpp: Fix regression when using wave files. After the first
+	file, the check is for executable, not readable, and they are never
+	executable.  An R got replaced with an X. Don't know why, typing error?
+
 2020-02-24  dshuman@usf.edu
 
 	* simviewer_impl.cpp: Make sure there are cell rows to zoom before zooming.

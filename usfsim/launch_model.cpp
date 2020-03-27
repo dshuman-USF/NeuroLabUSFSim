@@ -985,7 +985,6 @@ QWidget* plotEdit::createEditor(QWidget *parent, const QStyleOptionViewItem & /*
             auto iter = model1->plotData[model1->currModel].begin();
             advance(iter, row);
             maxcell = (*iter).maxRndVal;
-cout << "plot max pop #" << maxcell << endl;
          }
       }
    }
@@ -998,7 +997,6 @@ cout << "plot max pop #" << maxcell << endl;
             auto iter = model2->bdtData[model2->currModel].begin();
             advance(iter, row);
             maxcell = (*iter).maxRndVal;
-cout << "bdt max pop #" << maxcell << endl;
          }
       }
    }

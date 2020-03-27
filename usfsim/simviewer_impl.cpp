@@ -469,7 +469,7 @@ void SimViewer::timerFired()
       sprintf(nextname,"wave.%02d.%04d",launchNum, nextWave);
       if (access (nextname, R_OK) == 0)
       {
-         while (access(nextname, X_OK) == 0)
+         while (access(nextname, R_OK) == 0)
          {
             ifstream fStream(nextname);
             if (!fStream)

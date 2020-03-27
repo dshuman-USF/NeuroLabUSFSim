@@ -31,6 +31,15 @@ extern bool get_essentials(bool,bool,bool,bool);
 static void
 copy_state (Network *old, Network *new)
 {
+if (old->cellpop_count == new->cellpop_count)
+   printf("cell pops the same\n");
+if (old->fiberpop_count == new->fiberpop_count)
+   printf("fiber pops the same\n");
+printf("%p %p\n",old->fiberpop, new->fiberpop);
+printf("%p %p\n",old->cellpop,new->cellpop);
+printf("%p %p\n",old->syntype,new->syntype);
+
+
   int cellpop_count = MIN (old->cellpop_count, new->cellpop_count);
   int cpidx;
   int fiberpop_count = MIN (old->fiberpop_count, new->fiberpop_count);

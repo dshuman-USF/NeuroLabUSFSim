@@ -59,10 +59,12 @@ bool fibersInUse[MAX_INODES];
 /*   spawn system area variables to follow ******************************/
 
 int  currModel=0;
-int  bdt_flag;
-int  smr_flag;
-int  analog_flag;
-int  condi_flag;
+//int  bdt_flag;
+//int  wave_flag;
+//int  smr_flag;
+//int  smr_wave_flag;
+//int  analog_flag;
+//int  condi_flag;
 
 // analog info
 long  sp_inter[MAX_SPAWN];

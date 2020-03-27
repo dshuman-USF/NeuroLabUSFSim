@@ -56,7 +56,11 @@ extern SOCKET sock_fdout;
 #endif
 extern bool Debug;
 extern int use_socket;
-extern int write_file;
+extern int write_waves;
+extern int write_bdt;
+extern int write_analog;
+extern int write_smr;
+extern int write_smr_wave;
 extern int isedt;
 extern char *fmt;
 extern double dt_step;
@@ -203,10 +207,11 @@ simoutsned (void)
   static char *wfile_name_tmp=0;
   static char *buffptr=wave_buf;
   char line[80];
+  int time = (int)((S.stepnum + 1) * S.step / dt_step);
 
-  if (!have_data_socket() && !write_file) // if using socket and other side died, nothing to do
+  if (!have_data_socket() && !write_waves) // if using socket and other side died, nothing to do
     return;
-  if (recctr == 0) 
+  if (recctr == 0)  // new wave block set up
   {
     nrecs = S.step_count - S.stepnum >= 100 ? 100 : S.step_count - S.stepnum;
  
@@ -232,11 +237,18 @@ simoutsned (void)
         sprintf (line, "%12.8f %d\n", S.plot[n].val, S.plot[n].spike);
         memcpy(buffptr,line,strlen(line));
         buffptr += strlen(line);
+        if (write_smr_wave)
+        {
+           writeWaveForm(n,time,S.plot[n].val);
+           if (S.plot[n].spike)
+              writeWaveSpike(n, time);
+        }
       }
     }
     else // writing files
     {
        // don't let simviewer see file until it is complete
+       // write header and first block of wave values
       if (asprintf (&wfile_name, "%swave.%02d.%04d", outPath, S.spawn_number, flctr) == -1) exit (1);
       if (asprintf (&wfile_name_tmp, "%swave.%02d.%04d.tmp", outPath, S.spawn_number, flctr) == -1) exit (1);
       (wfile = fopen (wfile_name_tmp, "w")) || DIE;
@@ -245,13 +257,21 @@ simoutsned (void)
       for (n = 0; n < S.plot_count; n++)
         fprintf (wfile, "%3d %3d %3d %d %s\n", S.plot[n].pop, S.plot[n].cell, S.plot[n].var, S.plot[n].type, S.plot[n].lbl);
       for (n = 0; n < S.plot_count; n++)
+      {
         fprintf (wfile, "%12.8f %d\n", S.plot[n].val, S.plot[n].spike);
+        if (write_smr_wave)
+        {
+           writeWaveForm(n,time,S.plot[n].val);
+           if (S.plot[n].spike)
+              writeWaveSpike(n, time);
+        }
+      }
     }
     ++recctr;
     return;
   }
-
-  for (n = 0; n < S.plot_count; n++) 
+     // set up done if here, accumlate results
+  for (n = 0; n < S.plot_count; n++)  
   {
     sprintf (line, "%12.8f %d\n", S.plot[n].val, S.plot[n].spike);
     if (have_data_socket())
@@ -260,7 +280,15 @@ simoutsned (void)
       buffptr += strlen(line);
     }
     else
+    {
       fprintf (wfile, "%12.8f %d\n", S.plot[n].val, S.plot[n].spike);
+    }
+    if (write_smr_wave)
+    {
+       writeWaveForm(n,time,S.plot[n].val);
+       if (S.plot[n].spike)
+         writeWaveSpike(n, time);
+    }
   }
   if (++recctr == nrecs) 
   {
@@ -830,7 +858,7 @@ void simloop ()
        if (c->spike)  // fired?
        {
          int widx;
-         if (S.save_spike_times == 'y')
+         if (write_bdt)
          {
            for (widx = 0; widx < S.cwrit_count; widx++)
            {
@@ -851,7 +879,7 @@ void simloop ()
              }
            }
          }
-         if (S.save_smr == 'y')
+         if (write_smr)
          {
            for (widx = 0; widx < S.cwrit_count; widx++)
            {
@@ -871,7 +899,6 @@ void simloop ()
              }
            }
          }
-
          if (pn + 1 == S.nanlgpop) 
            nf++;
          for (tidx = 0; tidx < c->target_count; tidx++) 
@@ -945,20 +972,18 @@ void simloop ()
             doFibCalc = false;
             int tidx;
             int widx;
-            if (S.save_spike_times == 'y')
+            if (write_bdt)
               for (widx = 0; widx < S.fwrit_count; widx++)
                 if (S.fwrit[widx].pop == pn + 1 && S.fwrit[widx].cell == fn + 1)
                 {
                   fprintf (S.ofile, fmt, 100+ S.cwrit_count + widx + 1, (int)((S.stepnum + 1) * S.step / dt_step));
                   fprintf (S.ofile, "%c",0x0a);
                 }
-            if (S.save_smr == 'y')
+            if (write_smr)
               for (widx = 0; widx < S.fwrit_count; widx++)
                 if (S.fwrit[widx].pop == pn + 1 && S.fwrit[widx].cell == fn + 1)
                 {
                   writeSpike(100+ S.cwrit_count + widx + 1, (int)((S.stepnum + 1) * S.step / dt_step));
-
-
                 }
              for (tidx = 0; tidx < f->target_count; tidx++)
              {
@@ -1055,8 +1080,8 @@ void simloop ()
       }
     }
 
-     if (S.outsned == 'e')        // save to wave files?
-     {
+    if (S.outsned == 'e')        // save to wave files?
+    {
        int n, i, spike_count;
        for (n = 0; n < S.plot_count; n++) 
        {
@@ -1170,7 +1195,7 @@ void simloop ()
        simoutsned ();
      }
 
-     if (S.save_pop_total == 'y') // analog chan?
+     if (write_analog)
      {
        static int nanlgtot, nanlgcnt, nanlglst;
        nanlgtot += nf;
@@ -1187,12 +1212,12 @@ void simloop ()
            nval = 0;
          int aval = S.nanlgid * 4096 + nval;
          int time = (int)((S.stepnum + 1) * S.step / dt_step);
-         if (S.save_spike_times == 'y')
+         if (write_bdt)
          {
            fprintf (S.ofile, fmt, aval, time);
            fprintf (S.ofile, "%c",0x0a);
          }
-         if (S.save_smr == 'y')
+         if (write_smr)
            writeWave(aval, time); 
          nanlgtot = 0;
          nanlgcnt = 0;
@@ -1208,7 +1233,7 @@ void simloop ()
   fprintf(stderr,"simloop exited\n");
   fflush(stdout);
 
-  if (S.save_spike_times == 'y')
+  if (write_bdt)
     fclose (S.ofile);
 
   if (have_data_socket())
@@ -1216,7 +1241,7 @@ void simloop ()
 
 #if __linux__
   /* TODO no shell for windows, create a function that does what .sh file does. */
-  if (S.save_pop_total == 'y' && access("/usr/local/bin/simpower_spectrum.sh", X_OK) == 0)
+  if (write_analog && access("/usr/local/bin/simpower_spectrum.sh", X_OK) == 0)
   {
      char *cmd;
      if (isedt)

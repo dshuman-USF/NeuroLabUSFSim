@@ -35,7 +35,7 @@ AM_CXXFLAGS = $(DEBUG_OR_NOT) -Wall -std=c++17 -fPIC -Wno-unused-value -Wno-unus
 AM_CPPFLAGS = $(DEBUG_OR_NOT) -DVERSION=\"$(VERSION)\"
 AM_CFLAGS = $(DEBUG_OR_NOT) -Wall --std=c11 -Wno-unused-value -Wno-unused-result
 
-bin_PROGRAMS = simbuild simrun simviewer simmsg edt2spike2 \
+bin_PROGRAMS = simbuild simrun simviewer simmsg edt2spike2 wave2daq wave2daq.exe \
 					simbuild.exe simrun.exe simviewer.exe simmsg.exe edt2spike2.exe \
 					simpickwave simpickedt simtxt2flt simmerge
 if COND_FFTW
@@ -49,8 +49,6 @@ simpickedt_SOURCES = simpickedt.c
 simspectrum_SOURCES = simspectrum.c util.c
 simtxt2flt_SOURCES = simtxt2flt.c
 simmerge_SOURCES = simmerge.c
-
-
 
 BUILT_SOURCES = build_hash.c sim_hash.c
 
@@ -105,12 +103,15 @@ simmsg_exe_SOURCES = $(simmsg_SOURCES) simmsg.pro
 BUILT_SOURCES += $(simmsg_BUILT_SOURCES)
 
 edt2spike2_SOURCES = edt2spike2.cpp
-
 edt2spike2_exe_SOURCES = $(edt2spike2_SOURCES) edt2spike2_win.pro
+
+wave2daq_SOURCES = wave2daq.cpp
+wave2daq_exe_SOURCES = $(wave2daq_SOURCES) wave2daq_win.pro
 
 BUILT_SOURCES += Makefile_simbuild.qt Makefile_simviewer.qt Makefile_simmsg.qt \
 					  Makefile_simrun.qt Makefile_simbuild_win.qt Makefile_simviewer_win.qt \
-                 Makefile_simmsg_win.qt Makefile_simrun_win.qt Makefile_edt2spike2_win.qt
+                 Makefile_simmsg_win.qt Makefile_simrun_win.qt Makefile_edt2spike2_win.qt \
+                 Makefile_wave2daq_win.qt
 BUILT_SOURCES += simbuild_plugin_import.cpp simmsg_plugin_import.cpp \
 					  simviewer_plugin_import.cpp
 
@@ -138,7 +139,7 @@ dist_pkgdata_DATA= $(LINUX_FILES) $(LW_FILES) $(WIN_FILES) usfsim_win_$(VERSION)
 checkin_pD=        $(LINUX_FILES) $(LW_FILES) $(WIN_FILES)
 
 WINDOWS_FILES=simbuild.exe simrun.exe simviewer.exe simmsg.exe edt2spike2.exe \
-				$(WIN_FILES) $(LW_FILES) $(dist_doc_DATA)
+				wave2daq.exe $(WIN_FILES) $(LW_FILES) $(dist_doc_DATA)
 
 zipit:
 	make usfsim_win_$(VERSION).zip
@@ -170,6 +171,8 @@ simrun_LDFLAGS = `pkg-config --libs Qt5Gui Qt5Core Qt5Widgets  ` -lpthread -Wl,-
 edt2spike2_CXXFLAGS = $(AM_CXXFLAGS) -pipe -W -D_REENTRANT -fPIC
 edt2spike2_LDADD = -lson64 -lpthread
 
+wave2daq_CXXFLAGS = $(AM_CXXFLAGS) -pipe -W -D_REENTRANT -fPIC
+
 # these build .c files with a lookup tables for structs so we can save and
 # read files that are implementation independent (holes in structs, variations
 # between compiler versions, etc.)
@@ -196,6 +199,7 @@ lin: $(BUILT_SOURCES)
 	make simviewer
 	make simmsg
 	make edt2spike2
+	make wave2daq
 
 
 win: $(BUILT_SOURCES)
@@ -205,6 +209,7 @@ win: $(BUILT_SOURCES)
 	make simviewer.exe
 	make simmsg.exe
 	make edt2spike2.exe
+	make wave2daq.exe
 	make zipit
 
 mswin:
@@ -246,9 +251,17 @@ edt2spike2.exe$(EXEEXT): mswin Makefile_edt2spike2_win.qt $(edt2spike2_exe_SOURC
  endif
 
 Makefile_edt2spike2_win.qt: edt2spike2_win.pro
-	echo "ONE"
-	echo $(BUILT_SOURCES)
 	x86_64-w64-mingw32.static-qmake-qt5 edt2spike2_win.pro -r -spec win32-g++ 'DEFINES+=VERSION=\\\"$(VERSION)\\\"'
+
+wave2daq.exe$(EXEEXT): mswin Makefile_wave2daq_win.qt $(wave2daq_exe_SOURCES)
+ ifdef MXE_QMAKE
+	make -f Makefile_wave2daq_win.qt
+ else
+	@echo MXE environment not installed, windows program not built
+ endif
+
+Makefile_wave2daq_win.qt: wave2daq_win.pro
+	x86_64-w64-mingw32.static-qmake-qt5 wave2daq_win.pro -r -spec win32-g++ 'DEFINES+=VERSION=\\\"$(VERSION)\\\"'
 
 Makefile_simbuild.qt: simbuild.pro Makefile.am configure.ac
 	qmake simbuild.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'

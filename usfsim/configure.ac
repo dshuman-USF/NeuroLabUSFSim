@@ -24,7 +24,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([usfsim],[1.0.23],[dshuman@usf.edu])
+AC_INIT([usfsim],[1.0.24],[dshuman@usf.edu])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([simwin.cpp])

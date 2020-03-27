@@ -26,9 +26,12 @@ extern "C" {
 extern void SONStart();
 extern void SONStop();
 extern void openSpike();
+extern void openSpikeWave();
 extern void closeSpike();
 extern void writeSpike(int,int);
 extern void writeWave(int,int);
+extern void writeWaveForm(int,int,float);
+extern void writeWaveSpike(int,int);
 
 #ifdef __cplusplus
 }

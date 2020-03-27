@@ -22,6 +22,7 @@ This file is part of the USF Neural Simulator suite.
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <map>
 #include <sstream>
 #include <ctime>
 #include "simulator.h"
@@ -42,6 +43,7 @@ extern "C" {
 extern char simmsg[];
 
 TSon32File *sFile;
+TSon32File *sFileWave;
 
 static bool init_done = false;
 void SONStart()
@@ -165,7 +167,175 @@ void openSpike()
       }
    }
 }
+using lookup = struct { int real; int sib;};
+using sib = map <int, lookup>;
+using sibIter = sib::iterator;
 
+sib Sib;
+/*
+  chan real chan sib
+  1        1      2
+  2        3      -
+  3        4      5
+  4        6      7
+  5        0
+
+*/
+
+// set up the waveform chans for smr file
+// We can't mix analog waveform data and spike firing events, so
+// chan 2N is waveform (0,2,4,6 . . .),
+// chan 2N+1 is spikes (1,3,5,7 . . .)
+void openSpikeWave()
+{
+   int num_chans = 0;
+   int res;
+   TTimeDate td;
+   //TChanNum chan;
+   int chan;
+   char text[128];
+   TSTime64 sampIntv;
+   int real_chan = 0;
+   lookup next;
+
+   for (chan = 0; chan < S.plot_count; ++chan,++num_chans)
+      if (S.plot[chan].var == 1) // need 2 chans for action potentials
+         ++num_chans;
+   if (num_chans < MINCHANS)  // must be at least this many chans in smr file.
+      num_chans = MINCHANS;
+
+   string smrName(outFname);
+   const size_t period_idx = smrName.rfind('.');
+   if (string::npos != period_idx)
+      smrName.erase(period_idx);
+   smrName += "_wave.smr";
+   sFileWave = new TSon32File(1);
+   res = sFileWave->Create(smrName.c_str(),num_chans);
+
+   if (res != S64_OK)
+   {
+      char *msg, *cmd;
+
+      if (res == NO_ACCESS)
+         asprintf(&msg,"%s %s %s%s", "\"The file ",smrName.c_str(), " is in use by another program. Close that program and re-run the simulation.","\"");
+      else
+         asprintf(&msg,"%s %s %s %d%s", "\"Cannot open ", smrName.c_str(), " Error is: ",res,"\"");
+      asprintf(&cmd, "%s %s %s", simmsg, "\"SIMRUN ERROR\"", msg);
+      cout << msg << endl;
+      system (cmd);
+      free(msg);
+      free(cmd);
+
+      delete sFileWave;
+      sFileWave = nullptr;
+      return;
+   }
+   double tickSize = S.step/1000.0;
+   sFileWave->SetTimeBase(tickSize);
+   time_t curr_time = time(0);
+   tm* now = localtime(&curr_time);
+   td.ucHun = 0;
+   td.ucSec = now->tm_sec;
+   td.ucMin = now->tm_min;
+   td.ucHour = now->tm_hour;
+   td.ucDay = now->tm_mday;
+   td.ucMon = now->tm_mon;
+   td.wYear = now->tm_year+1900;
+   sFileWave->TimeDate(nullptr,&td);
+
+    // add some comments
+   stringstream strm;
+
+   strm << "Simulator run, waveform data.";
+   res = sFileWave->SetFileComment(0,strm.str().c_str());
+   strm.str("");
+   strm << "Model file is ";
+   strm << S.snd_file_name;
+   res = sFileWave->SetFileComment(1,strm.str().c_str());
+    // create chans
+   sampIntv = 1;
+   int plot_type = 0;
+   const char *varnames[] = {"", "Vm", "gK", "Thr", "Vm", "h", "Thr"};
+   const char *units[] = {"%VC", "%VC/s", "cmH2O", "frac", "frac", "frac", "L", "L", "L/s", "L/s", "cmH2O", "cmH2O", "cmH2O", "0->1", "0->1", "-1->1"};
+   for (chan = 0; chan < S.plot_count; ++chan)
+   {
+       // this code from simviewer_launch_impl.cpp
+      char *val = nullptr;
+      plot_type = S.plot[chan].var;
+      switch (plot_type)
+      {
+         case -1: // lung model
+         case -2:
+         case -3:
+         case -4:
+         case -5:
+         case -6:
+         case -7:
+         case -8:
+         case -9:
+         case -10:
+         case -11:
+         case -12:
+         case -13:
+         case -14:
+         case -15:
+         case -16:
+            if (asprintf (&val, "%.5s", units[abs(plot_type) - 1]) == -1) exit (1);
+            break;
+         case 0: 
+            if (asprintf (&val, "mV") == -1) exit (1);
+            break;
+         case 1: 
+         case 3: 
+            if (asprintf (&val, "mV") == -1) exit (1);
+            break;
+         case 2: 
+            if (asprintf (&val, "%.5s", varnames[S.plot[chan].type * 3 + plot_type]) == -1) exit (1);
+            break;
+         case 4:
+            if (asprintf (&val, "%.2f ms",S.plot[chan].val) == -1) exit (1);
+            break;
+         default:
+            if (plot_type < 1)
+               break;
+            if (asprintf (&val, "%d ms", S.plot[chan].var) == -1) exit (1);
+            break;
+      }
+      sprintf(text,"%.8s", S.plot[chan].lbl); // 9 chars or less
+      if (plot_type == 1) // only need this for action potentials
+      {
+         // event chan
+         res = sFileWave->SetEventChan(real_chan,sampIntv,ceds64::TDataKind::EventRise,chan);
+         if (res != S64_OK)
+            cout << "wave event chan create res: " << res << endl;
+         sFileWave->SetChanComment(real_chan,"Spikes");
+         sFileWave->SetChanTitle(real_chan,text);
+         next.sib = real_chan;
+         ++real_chan;
+         next.real = real_chan;
+      }
+      else
+      {
+         next.real = real_chan;
+         next.sib = -1;
+      }
+      Sib.insert(pair(chan,next));
+
+         // waveform chan
+      res = sFileWave->SetWaveChan(real_chan,sampIntv,ceds64::TDataKind::RealWave,tickSize,chan);
+      if (res != S64_OK)
+         cout << "wave chan create res: " << res << endl;
+      if (val)
+         sFileWave->SetChanUnits(real_chan,val); // units vary
+      sFileWave->SetChanTitle(real_chan,text);
+      sFileWave->SetChanScale(real_chan,0.5);
+      ++real_chan;
+   }
+   sFileWave->SetBuffering(-1,0x8000);
+}
+
+
+// Close any open smr file.
 void closeSpike()
 {
    if (sFile)
@@ -174,9 +344,16 @@ void closeSpike()
       delete sFile;
       sFile == nullptr;
    }
+   if (sFileWave)
+   {
+      sFileWave->Close();
+      delete sFileWave;
+      sFileWave == nullptr;
+   }
 }
 
 
+// write bdt/edt type event
 void writeSpike(int chan, int time)
 {
    int res;
@@ -192,6 +369,7 @@ void writeSpike(int chan, int time)
    }
 }
 
+// write analog wave data 
 void writeWave(int chan, int time)
 {
    int res;
@@ -209,6 +387,43 @@ void writeWave(int chan, int time)
         cout << "Wave chan write error: " << res << endl;
    }
 }
+
+// This is analog the waveform data, same stuff
+// you see in simviewer. The chan is a plot row number.
+// We hide the real chan from the caller, it does not know
+// we have a sibling chan
+void writeWaveForm(int chan, int time, float val)
+{
+   sibIter iter = Sib.find(chan);
+   int res;
+   TChanNum fileChan = iter->second.real;
+
+   TSTime64 fileTime = time;
+   if (sFileWave)
+   {
+      res = sFileWave->WriteWave(fileChan,&val,1,fileTime);
+      if (res < 0)
+        cout << "Wave chan write error: " << res << endl;
+   }
+}
+
+// write bdt/edt type event.
+// See above for chan info.
+void writeWaveSpike(int chan, int time)
+{
+   int res;
+   sibIter iter = Sib.find(chan);
+   TChanNum fileChan = iter->second.sib;
+   TSTime64 fileTime = time;
+
+   if (sFileWave)
+   {
+      res = sFileWave->WriteEvents(fileChan,&fileTime,1);
+      if (res != S64_OK)
+         cout << "Wave Spike Event chan write error: " << res << endl;
+   }
+}
+
 
 #ifdef __cplusplus
 }

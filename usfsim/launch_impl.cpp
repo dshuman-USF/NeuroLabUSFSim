@@ -672,7 +672,6 @@ void launchWindow::modelsToVars()
    hostNameModel->setCurrentModel(currModel);
    hostNameMapper->setCurrentIndex(currModel);
    D.baby_lung_flag = ui->lungCheck->isChecked();
-   condi_flag = ui->condiCheck->isChecked();
 }
 
 int launchWindow::lookupDidx(int type, int pop_num)
@@ -746,15 +745,15 @@ void launchWindow::launchSim()
    char  script[100];
    int   row;
    char  temp[10];
-   int   initial_condi_flag = condi_flag;
    char *launchN_sim = nullptr;
    char *scriptfile;
    int result;
-   bool wave_flag, socket_flag, have_rows;
-   simChild *launch = &simLaunches[currModel];
+   bool bdt_flag, wave_flag, smr_flag, socket_flag;
+   bool smr_wave_flag, analog_flag, condi_flag, have_rows;
    hostNameRec n_rec;
    QMessageBox msgBox;
    QByteArray simfile, scrptfile, sndfile;
+   simChild *launch = &simLaunches[currModel];
 
    if (launch->simProc) // already running?
    {
@@ -774,20 +773,19 @@ void launchWindow::launchSim()
       msgBox.exec();
       return;
    }
-   if (ui->selLaunchNoPlot->isChecked())
-      wave_flag = false;
-   else
-      wave_flag = ui->selLaunchPlot->isChecked();          // only one of these will be set
+
    socket_flag = ui->selLaunchPlotSocket->isChecked();
    bdt_flag = ui->selLaunchBdt->isChecked();
+   wave_flag = ui->selLaunchPlot->isChecked();
    smr_flag = ui->selLaunchSmr->isChecked();
+   smr_wave_flag = ui->selLaunchSmrWave->isChecked();
    analog_flag = ui->selLaunchAnalog->isChecked();
    condi_flag = ui->condiCheck->isChecked();
    D.baby_lung_flag =ui->lungCheck->isChecked();
 
    if (Version != FILEIO_FORMAT_VERSION6)
    {
-      QString msg = "The current .snd file is a previous version.  You need to write the current file out so it will be upgraded to the current version";
+      QString msg = "The current .snd file is a previous version.  You need to save the current model to the current file to upgrade the file to the current version";
       mainwin->printMsg(msg);
       msgBox.setIcon(QMessageBox::Warning);
       msgBox.setWindowTitle("Need To Upgrade .snd File");
@@ -809,12 +807,12 @@ void launchWindow::launchSim()
    asprintf(&launchN_sim, "spawn%d.sim", currModel);
    Save_sim(launchN_sim,mainwin->currSndFile.toLatin1().data());
 
-
    sprintf(script,"script%d.txt",currModel);
    script_ptr=fopen(script,"w");
    fprintf(script_ptr,"spawn%d.sim\n",currModel);
    fprintf(script_ptr,"%ld\n",sp_inter[currModel]);
 
+     // stuff to plot?
    have_rows = false; // has to be at least one entry, make sure
    for (row = 0; row < MAX_ENTRIES; ++row)
       if (valid (row,currModel))
@@ -822,7 +820,7 @@ void launchWindow::launchSim()
          have_rows = true;
          break;
       }
-   if ((wave_flag || socket_flag) && have_rows)
+   if ((wave_flag || socket_flag || smr_wave_flag) && have_rows)
    {
       fprintf(script_ptr,"E\n");
       fprintf(script_ptr,"%d\n",currModel);
@@ -834,40 +832,29 @@ void launchWindow::launchSim()
             sp_bpn2[row][currModel],
             sp_bm2[row][currModel],
             sp_bv2[row][currModel],
-            get_comment1 (sp_bpn2[row][currModel], sp_bv2[row][currModel]));
+            get_comment1(sp_bpn2[row][currModel], sp_bv2[row][currModel]));
       }
-      fprintf(script_ptr,"\n");
+      fprintf(script_ptr,"\n"); // blank line indicates end
    }
    else
       fprintf(script_ptr,"\n");
 
-   if (bdt_flag==true)
+   if (bdt_flag == true)
       fprintf(script_ptr,"Y\n");
    else
       fprintf(script_ptr,"N\n");
-   if (smr_flag==true)
+   if (smr_flag == true)
+      fprintf(script_ptr,"Y\n");
+   else
+      fprintf(script_ptr,"N\n");
+   if (smr_wave_flag == true)
       fprintf(script_ptr,"Y\n");
    else
       fprintf(script_ptr,"N\n");
 
+      // create bdt table file(s)?
    if (bdt_flag || smr_flag)
    {
-      if (analog_flag==true)
-      {
-         fprintf(script_ptr,"Y\n");
-         fprintf(script_ptr,"%d\n",sp_aid[currModel]);
-         fprintf(script_ptr,"%d\n",sp_apop[currModel]);
-         fprintf(script_ptr,"%d\n",sp_arate[currModel]);
-         fprintf(script_ptr,"%f\n",sp_atk[currModel]);
-         fprintf(script_ptr,"%f\n",sp_ascale[currModel]);
-      }
-      else
-         fprintf(script_ptr,"N\n");
-      if (fnameSel == EDT)
-         fprintf(script_ptr,"spawn%d.edt\n",currModel);
-      else
-         fprintf(script_ptr,"spawn%d.bdt\n",currModel);
-
       have_rows = false; // has to be at least one entry, make sure
       for (row = 0; row < MAX_ENTRIES; ++row)
          if ((sp_bpn[row][currModel]!=0) && (sp_bm[row][currModel]!=0))
@@ -875,8 +862,24 @@ void launchWindow::launchSim()
             have_rows = true;
             break;
          }
-      if ((wave_flag || socket_flag) && have_rows)
+      if (have_rows)
       {
+         if (analog_flag==true)
+         {
+            fprintf(script_ptr,"Y\n");
+            fprintf(script_ptr,"%d\n",sp_aid[currModel]);
+            fprintf(script_ptr,"%d\n",sp_apop[currModel]);
+            fprintf(script_ptr,"%d\n",sp_arate[currModel]);
+            fprintf(script_ptr,"%f\n",sp_atk[currModel]);
+            fprintf(script_ptr,"%f\n",sp_ascale[currModel]);
+         }
+         else
+            fprintf(script_ptr,"N\n");
+         if (fnameSel == EDT)
+            fprintf(script_ptr,"spawn%d.edt\n",currModel);
+         else
+            fprintf(script_ptr,"spawn%d.bdt\n",currModel);
+
          for (row = 0; row < MAX_ENTRIES; ++row)
          {
             if ((sp_bpn[row][currModel]!=0) && (sp_bm[row][currModel]!=0))
@@ -925,7 +928,7 @@ void launchWindow::launchSim()
    sndMsg.append(MSG_END);
    snd.close();
 
-   if (bdt_flag || smr_flag || wave_flag || socket_flag) // any reason to running sim?
+   if (bdt_flag || smr_flag || wave_flag || socket_flag || smr_wave_flag) // any reason to running sim?
    {
         // prepare for a new run by cleaning out old files
       char *filename, *cmd=nullptr;
@@ -1110,7 +1113,7 @@ void launchWindow::launchSim()
          else
             mainwin->printMsg("The simviewer program is running.");
       }
-      if (initial_condi_flag)
+      if (condi_flag)
       {
          QString msg("The simulator is writing convergence/divergence information "
          "to the file condi.csv, as you requested.  This may take a few "
@@ -1124,7 +1127,7 @@ void launchWindow::launchSim()
       msgBox.setIcon(QMessageBox::Warning);
       msgBox.setWindowTitle("NO OUTPUT SELECTED");
       msgBox.setStandardButtons(QMessageBox::Ok);
-      msgBox.setText("At least one of Create .bdt (or other file type), Send Plot Data Directly To Simviewer, or Save Plot Data To Files must be selected. Simulator was not launched.");
+      msgBox.setText("At least one of Create .bdt (or other file type), Send Plot Data Directly To Simviewer, Save Plot Data To Files, or Create smr Waveform File must be selected. Simulator was not launched.");
       msgBox.exec();
    }
 }

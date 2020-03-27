@@ -67,13 +67,17 @@ void destroy_cmd_socket();
 void destroy_view_socket();
 simulator_global S;
 int Debug=0;
-int write_file;
+int write_waves;
 int use_socket;
+int write_bdt;
+int write_analog;
+int write_smr;
+int write_smr_wave;
 int isedt = false;
 char bdt_fmt[] = "%5d%8d";
 char edt_fmt[] = "%5d%10d";
 char *fmt;
-double dt_step;
+double dt_step= 0.5;
 char simmsg[2048];
 char sim_fname[1024];
 char *script_ptr;
@@ -589,7 +593,7 @@ static void interactive()
 
   do 
   {
-    printf ("\n\n\n\n\n\n\n\n\n\n          E -- DRAW MEMBRANE POTENTIALS ON O-SCOPE\n");
+    printf ("\n\n\n\n\n\n\n\n\n\n          E -- PLOT MEMBRANE POTENTIALS ON VIEWER\n");
     printf ("         <CR> -- SKIP\n");
     fflush (stdout);
     if ((read = getline (&inbuf, &len, stdin)) == -1)
@@ -647,8 +651,9 @@ static void interactive()
 
 SPIKETIMES:
 
-  S.save_spike_times = get_yes_no ("\n\n\n\n\n\n\n\n\n\n  SAVE SPIKE TIMES TO DISK? (Y/N)  ");
-  S.save_smr = get_yes_no ("\n\n\n\n\n\n\n\n\n\n  CREATE SMR FILE? (Y/N)  ");
+  S.save_spike_times = get_yes_no ("\n\n\n\n\n\n\n\n\n\n  SAVE SPIKE TIMES TO BDT/EDT FILE? (Y/N)  ");
+  S.save_smr = get_yes_no ("\n\n\n\n\n\n\n\n\n\n  CREATE SMR FILE WITH BDT VALUES? (Y/N)  ");
+  S.save_smr_wave = get_yes_no ("\n\n\n\n\n\n\n\n\n\n  CREATE SMR FILE WITH WAVEFORM VALUES? (Y/N)  ");
   
   if (S.save_spike_times == 'y' || S.save_smr == 'y') 
   {
@@ -791,11 +796,11 @@ static void non_interactive(FILE* script)
 
     while (1) 
     {
-      int scan_count, pop, cell, var, n;
+      int scan_count, pop, cell, var, type, val, spike;
       read = getline (&inbuf, &len, script);
-      if (nograph (inbuf, read))
+      if (nograph (inbuf, read)) // expect blank line at end
         break;
-       scan_count = sscanf (inbuf, "%d , %d%n , %d%n , %n", &pop, &cell, &n, &var, &n, &n);
+       scan_count = sscanf (inbuf, "%d , %d%n , %d%n , %n", &pop, &cell, &val, &var, &type, &spike);
       if (scan_count == 2)
         var = 1;
       else if (scan_count != 3
@@ -808,27 +813,32 @@ static void non_interactive(FILE* script)
       S.plot[S.plot_count - 1].pop = pop;
       S.plot[S.plot_count - 1].cell = cell;
       S.plot[S.plot_count - 1].var = var;
-      S.plot[S.plot_count - 1].type = 0;
-      S.plot[S.plot_count - 1].val = 0;
-      S.plot[S.plot_count - 1].spike = 0;
+      S.plot[S.plot_count - 1].type = type;
+      S.plot[S.plot_count - 1].val = val;
+      S.plot[S.plot_count - 1].spike = spike;
       {
         int e = strlen (inbuf) - 1;
         while (e > 0 && !isgraph (inbuf[e]))
           inbuf[e--] = 0;
-        S.plot[S.plot_count - 1].lbl = strdup (inbuf + n);
+        S.plot[S.plot_count - 1].lbl = strdup (inbuf + spike);
       }
     }
     if (S.plot_count == 0)
        S.outsned = ' ';
   }
 
+
 SPIKETIMES:
   getline (&inbuf, &len, script);            // save bdt?
   sscanf (inbuf, "%c", &response);
   S.save_spike_times = tolower (response);
-  getline (&inbuf, &len, script);           // save smr?
+  getline (&inbuf, &len, script);           // save bdt info to smr?
   sscanf (inbuf, "%c", &response);
   S.save_smr = tolower (response);
+  getline (&inbuf, &len, script);           // make an smr of wave info?
+  sscanf (inbuf, "%c", &response);
+  S.save_smr_wave = tolower (response);
+
   if (S.save_spike_times == 'y' || S.save_smr == 'y') 
   {
     getline (&inbuf, &len, script);
@@ -855,9 +865,8 @@ SPIKETIMES:
     read = getline (&ofile_name, &ofname_len, script);
     delete_newline (ofile_name, &read);
     sprintf(outFname,"%s%s",outPath,ofile_name);
-    S.ofile = fopen (outFname, "wb");
 
-    if (S.save_pop_total == 'y') 
+    if (S.save_spike_times == 'y') 
     {
 #ifdef __linux__
        if (strcasestr(ofile_name,".edt"))
@@ -865,6 +874,7 @@ SPIKETIMES:
        if (StrStrIA(ofile_name,".edt"))
 #endif
         isedt=true;
+      S.ofile = fopen (outFname, "wb");
       if (isedt)
       {
          fmt = edt_fmt;
@@ -921,7 +931,17 @@ SPIKETIMES:
 
 void usage(char* name)
 {
-   printf("usage %s [--script [optional path]script_name] [--condi] [--file | --socket --port port number] [--output optional output path]\n",name);
+   printf("usage %s [--script [optional path]script_name] [--condi] [--file | --socket --port port number] [--bdt] [--smr] [--wave] [--output optional output path]\n"
+         "where:\n"
+         "--condi create condi csv files\n"
+         "--file reads .sim and .snd files\n"
+         "-- socket --port number uses network connection at port number\n"
+         "--bdt creates a bdt/edt file\n"
+         "--smr creates a Spike2 file that contains bdt information\n"
+         "--wave creates a Spike2 file that contains waveforminformation\n"
+         "--output saves the files in the output path\n"
+         ,name);
+
 }
 
 const static struct option long_options[] =
@@ -933,8 +953,11 @@ const static struct option long_options[] =
    {"host",required_argument,0,'r'},
    {"script",required_argument,0,'s'},
    {"output",required_argument,0,'o'},
-   {"file",no_argument,&write_file,1},
+   {"file",no_argument,&write_waves,1},
    {"socket",no_argument,&use_socket,1},
+   {"bdt",no_argument,&write_bdt,1},
+   {"smr",no_argument,&write_smr,1},
+   {"wave",no_argument,&write_smr_wave,1},
    {"help",no_argument,0,'h'},
    {"h",no_argument,0,'h'},
    {0,0,0,0}
@@ -1003,6 +1026,7 @@ int main (int argc, char **argv)
            break;
      }
   }
+
   if (strlen(inPath) > 0 && strlen(outPath) == 0)
      strcpy(outPath,inPath);
 
@@ -1026,7 +1050,7 @@ int main (int argc, char **argv)
 #endif
 
    // write wave files or send directly to simview?
-  if (write_file && use_socket) // only one of these can be set
+  if (write_waves && use_socket) // only one of these can be set
   {
      fprintf(stderr,"WARNING: Only one of --file or --socket can be used.\nSetting file as the default.");
 #if defined WIN32
@@ -1039,8 +1063,6 @@ int main (int argc, char **argv)
 #endif
      use_socket = false;
   }
-  if (!write_file && !use_socket) // default to file
-    write_file = true;
 
   if (simbuild_port != 0)
     create_socket();
@@ -1053,7 +1075,7 @@ int main (int argc, char **argv)
 #else
     // Windows has no easy way (if any) to turn a buffer in memory
     // into a FILE *. The best we can do is create a temp file that
-    // will live in memory and goes away when we close it.
+    // will live in memory (unless it is too big) and goes away when we close it.
     char namebuff[MAX_PATH];
     FILE *fp;
     unsigned int randno;
@@ -1095,15 +1117,27 @@ int main (int argc, char **argv)
   }
   else
      interactive();
-
   signal (SIGTERM, sigterm_handler);
   if (S.save_smr == 'y')
+  {
+     write_smr = true;
      openSpike();
-  simloop ();
+  }
+  if (S.save_smr_wave == 'y')
+  {
+     write_smr_wave = true;
+     openSpikeWave();
+  }
+  if (S.save_spike_times == 'y')
+     write_bdt = true;
+  if (S.save_pop_total == 'y')
+     write_analog = true;
+
+  simloop(); // run the simulation
+
   if (simbuild_port != 0)
     destroy_sockets();
-  if (S.save_smr == 'y')
-     closeSpike();
+  closeSpike();
 #if defined WIN32
   SONStop();
 #endif

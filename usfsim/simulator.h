@@ -208,6 +208,7 @@ typedef struct
   char outsned;
   char save_spike_times;
   char save_smr;
+  char save_smr_wave;
   char save_pop_total;
   int spawn_number;
   int plot_count;

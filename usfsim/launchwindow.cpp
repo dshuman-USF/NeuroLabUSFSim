@@ -145,6 +145,8 @@ void launchWindow::loadSettings()
       ui->condiCheck->setChecked(val);
       val = settings.value("selblung",false).toBool();
       ui->lungCheck->setChecked(val);
+      val = settings.value("selwave",false).toBool();
+      ui->selLaunchSmrWave->setChecked(val);
    }
    else
       setGeometry(100,100,1000,800);
@@ -180,6 +182,7 @@ void launchWindow::saveSettings()
       settings.setValue("selnone", ui->selLaunchNoPlot->isChecked());
       settings.setValue("selcondi", ui->condiCheck->isChecked());
       settings.setValue("selblung", ui->lungCheck->isChecked());
+      settings.setValue("selwave", ui->selLaunchSmrWave->isChecked());
    }
 }
 

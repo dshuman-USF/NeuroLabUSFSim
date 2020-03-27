@@ -340,7 +340,7 @@ font-style:bold
              </rect>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create a smr file. This is a file that the spike2 program can read. This is a product of Cambridge Electronic Design Limited.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an smr file. This is a file that the spike2 program can read. This is a product of Cambridge Electronic Design Limited.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="text">
              <string>Create smr File</string>
@@ -434,6 +434,9 @@ font-style:bold
            <width>211</width>
            <height>41</height>
           </rect>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add analog entries to the .bdt/.edt file. Note, if you do not create a .bdt/.edt file, the analog entries will not be saved.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Create Analog Entries
@@ -655,7 +658,7 @@ For bdt and smr Files</string>
              <rect>
               <x>300</x>
               <y>10</y>
-              <width>140</width>
+              <width>160</width>
               <height>25</height>
              </rect>
             </property>
@@ -666,14 +669,14 @@ For bdt and smr Files</string>
            <widget class="QPushButton" name="launchAddLung">
             <property name="geometry">
              <rect>
-              <x>466</x>
+              <x>475</x>
               <y>10</y>
-              <width>140</width>
+              <width>160</width>
               <height>25</height>
              </rect>
             </property>
             <property name="text">
-             <string>Add Lung Plots</string>
+             <string>Add Lung Plot</string>
             </property>
            </widget>
            <widget class="QRadioButton" name="selLaunchPlotSocket">
@@ -756,6 +759,25 @@ For bdt and smr Files</string>
             </property>
             <property name="text">
              <string>Do Not Generate Plot Data</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="selLaunchSmrWave">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>80</y>
+              <width>221</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create an smr file that contains the waveform values that are shown in simviewer. This is a file that the spike2 program can read.&lt;/p&gt;&lt;p&gt;This is independent of the choices above. If you select this and select Do Not Generate Plot Data, the smr file will still be created.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Create smr Waveform File</string>
             </property>
             <property name="checked">
              <bool>false</bool>
