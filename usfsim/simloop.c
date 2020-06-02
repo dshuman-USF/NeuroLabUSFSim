@@ -114,6 +114,100 @@ bool have_data_socket()
     return 0;
 }
 
+// this was for initial testing on ways to use afferent inputs 
+#if 0
+typedef struct { double x;  // bp or other value
+                double y;  // probabilty for this value
+               } Points;
+
+static const double bpl = 120;
+static const double bp0 = 140;
+static const double bph = 160;
+
+//static const double pl = 0.0;
+//static const double p0 = 0.5;
+//static const double ph = 0.9;
+
+static const double pl = 0.00;
+static const double p0 = 0.05;
+static const double ph = 0.08;
+
+static double Hz = 3.0;
+
+Points pts[] = {{bpl,pl},{bp0,p0},{bph,ph}};
+
+// function to interpolate the given data points using linear interpolation.
+// xi corresponds to the new data point whose value is to be obtained
+// n represents the number of known data points
+// Data is the array with the points
+static double interpolate(Points f[], double xi, int n)
+{
+   double result = 0; 
+   for (int i=0; i<n; i++)
+   {
+      // Compute individual terms of above formula
+      double term = f[i].y; 
+      for (int j=0 ; j<n; j++) 
+      {
+         if (j!=i) 
+            term = term * (xi - f[j].x) / (f[i].x - f[j].x);
+      }
+      result += term; 
+   }
+   return result;
+}
+
+static Points *Prob;
+static size_t ProbLen;
+
+// figure out # of ticks for Hz seconds, then calculate sine values from 0 to
+// 2pi for that many slots
+static void makeProb()
+{
+   unsigned int ticks_in_sec = ceil(1000.0/S.step);
+   ProbLen = ticks_in_sec * Hz;
+   int len = sizeof(pts)/sizeof(Points);
+   printf("ts: %u steps: %lu len: %d\n",ticks_in_sec, ProbLen,len);
+   Prob = (Points*) malloc(ProbLen*sizeof(Points));
+   Points *prob = Prob;
+   double val, res;
+   double stepsize = (2*M_PI)/ProbLen;
+   int slots = 0;
+   for (double i = 0.0;  slots < ProbLen ; i+= stepsize, ++slots)
+   {
+      val = sin(i) * ((bph-bpl)/2.0)+bp0; // scale to 120 - 160
+      res = interpolate(pts,val,len);
+      printf("%lf %lf %lf\n",i,val,res);
+      prob->x = val;
+      prob->y = res;
+      ++prob;
+   }
+}
+#endif
+
+// Given current afferent input value for a fiber pop, return
+// the corresponding probabilty using linear interpolation
+// on the value to probability lookup table for this population.
+// Values outside the range return 0.
+static double interpolate(FiberPop *fp, double curr_val)
+{
+   int num = fp->num_aff - 1;
+   int idx;
+   double result = 0.0; 
+   for (idx = 0; idx < num; ++idx)
+   {
+      if (curr_val >= fp->aff_val[idx] && curr_val < fp->aff_val[idx+1])
+      {   
+         result = (fp->aff_prob[idx+1]  - fp->aff_prob[idx]) 
+                  / (fp->aff_val[idx+1] - fp->aff_val[idx])
+                  * (curr_val - fp->aff_val[idx]) + fp->aff_prob[idx];
+         break;
+      }
+   }
+   return result;
+}
+
+
 // Send the simulation plot results directly to simviewer.
 static void send_wave()
 {
@@ -239,7 +333,8 @@ simoutsned (void)
         buffptr += strlen(line);
         if (write_smr_wave)
         {
-           writeWaveForm(n,time,S.plot[n].val);
+           if (S.plot[n].var != -17) // no waveforms for events
+              writeWaveForm(n,time,S.plot[n].val);
            if (S.plot[n].spike)
               writeWaveSpike(n, time);
         }
@@ -261,7 +356,8 @@ simoutsned (void)
         fprintf (wfile, "%12.8f %d\n", S.plot[n].val, S.plot[n].spike);
         if (write_smr_wave)
         {
-           writeWaveForm(n,time,S.plot[n].val);
+           if (S.plot[n].var != -17)
+              writeWaveForm(n,time,S.plot[n].val);
            if (S.plot[n].spike)
               writeWaveSpike(n, time);
         }
@@ -285,7 +381,8 @@ simoutsned (void)
     }
     if (write_smr_wave)
     {
-       writeWaveForm(n,time,S.plot[n].val);
+       if (S.plot[n].var != -17)
+          writeWaveForm(n,time,S.plot[n].val);
        if (S.plot[n].spike)
          writeWaveSpike(n, time);
     }
@@ -623,7 +720,6 @@ void chk_for_cmd()
   } while (pause);
 }
 
-
 /* This is the simulation calculation engine.
 */
 void simloop ()
@@ -682,7 +778,7 @@ void simloop ()
 
     Motor mr;
     State next_state = {0};
-    
+
     if (lung_is_used) 
     {
       mr.phrenic = mup_eval (m.phrenic, S.phrenic_equation, &S.pe_evaluator);
@@ -696,10 +792,9 @@ void simloop ()
       next_state   = lung (mr, S.step);
     }
 
-    if ((S.stepnum % (int) ticks_in_sec) == 0)
+    if (have_cmd_socket() && (S.stepnum % (int) ticks_in_sec) == 0)
     {
-      snprintf(msg,sizeof(msg)-1,"TIME\n%d\n", (int)(S.stepnum/ticks_in_sec));
-      if (have_cmd_socket())
+        snprintf(msg,sizeof(msg)-1,"TIME\n%d\n", (int)(S.stepnum/ticks_in_sec));
         send(sock_fd,&msg,strlen(msg),0); // progress rpt for simbuild 
     }
     if ((now = time (0)) > last_time)
@@ -809,13 +904,15 @@ void simloop ()
             Gsum += Gk + S.Gm0;
             double GE0 = get_GE0 (p);
 
-            static char done[100];
-            if (!done[pn]) 
+            if(Debug)
             {
-              //              printf ("pn = %d, GE0: %g\n", pn, GE0);
-              done[pn] = 1;
-            }
-            {
+               static char done[100];
+               if (!done[pn]) 
+               {
+                 // printf ("pn = %d, GE0: %g\n", pn, GE0);
+                 done[pn] = 1;
+              }
+
               static double last_volume = -1;
               if (p->ic_expression && state.volume != last_volume) 
               {
@@ -829,7 +926,7 @@ void simloop ()
 
           Vm = GEsum/Gsum + (Vm - GEsum/Gsum) * exp(Gsum * p->R0);
 
-         if (0)
+         if (0) // debug stuff, 0 -> 1 to turn it on
          {
            static FILE *f;
            if (f == NULL)
@@ -857,6 +954,7 @@ void simloop ()
 
        if (c->spike)  // fired?
        {
+// printf("FIRE\n");
          int widx;
          if (write_bdt)
          {
@@ -931,11 +1029,13 @@ void simloop ()
       FiberPop *p = S.net.fiberpop + pn;
       skipFib = false;
       doFibCalc = false;
+      int fn;
+      int widx;
       if (S.stepnum >= p->start - 1 && S.stepnum < p->stop - 1)
       {
         if (p->pop_subtype == ELECTRIC_STIM)
         {
-          skipFib = true;
+          skipFib = true; // don't do this unless hit the next tick
           if (p->next_stim == S.stepnum) // time to apply stim
           {
              doFibCalc = true;
@@ -959,36 +1059,57 @@ void simloop ()
              }
            }
         }
+        else if (p->pop_subtype == AFFERENT)
+        {
+           double prob;
+           doFibCalc = true;
+           skipFib = false;
+           nextExternalVal(p,&prob);
+           printf("Got %lf\n",prob);
+           p->probability = interpolate(p,prob);
+           printf("Prob for %lf is %lf\n",prob,p->probability);
+
+           // here will go code to determine the current probablity for this pop/source
+        }
         else if (p->pop_subtype == 0)
            fprintf(stderr,"Unknown fiber subtype\n");
 
-        int fn;
         for (fn = 0; fn < p->fiber_count; fn++) 
         {
+          int tidx;
           Fiber *f = p->fiber + fn;
           float ranval;
+          f->state = 0;
+// dale bp test, use prob from fake bp prob array
+//          if (doFibCalc || (!skipFib && (ranval = ran(&p->infsed)) <= curr_prob))
+// end daletest
+
+// real code
           if (doFibCalc || (!skipFib && (ranval = ran(&p->infsed)) <= p->probability))
           {
+            f->state = 1; // an event occurred
             doFibCalc = false;
-            int tidx;
-            int widx;
             if (write_bdt)
+            {
               for (widx = 0; widx < S.fwrit_count; widx++)
                 if (S.fwrit[widx].pop == pn + 1 && S.fwrit[widx].cell == fn + 1)
                 {
                   fprintf (S.ofile, fmt, 100+ S.cwrit_count + widx + 1, (int)((S.stepnum + 1) * S.step / dt_step));
                   fprintf (S.ofile, "%c",0x0a);
                 }
+            }
             if (write_smr)
+            {
               for (widx = 0; widx < S.fwrit_count; widx++)
                 if (S.fwrit[widx].pop == pn + 1 && S.fwrit[widx].cell == fn + 1)
                 {
                   writeSpike(100+ S.cwrit_count + widx + 1, (int)((S.stepnum + 1) * S.step / dt_step));
                 }
-             for (tidx = 0; tidx < f->target_count; tidx++)
-             {
-               Target *target = f->target + tidx;
-               Syn *syn = target->syn;
+            }
+            for (tidx = 0; tidx < f->target_count; tidx++)
+            {
+              Target *target = f->target + tidx;
+              Syn *syn = target->syn;
                int type_of_syn = S.net.syntype[syn->stidx].SYN_TYPE;
                   // if NORM, one calc, both pre and post get same calc, depending on sign
                if (!S.ispresynaptic || type_of_syn == SYN_NORM) 
@@ -997,8 +1118,9 @@ void simloop ()
                  syn->q[(S.stepnum + target->delay) % syn->q_count] *= target->strength;
                else
                  syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength - 1.;
+// printf("%d %lf\n",S.stepnum % syn->q_count,syn->q[S.stepnum % syn->q_count]);
               }
-            }
+           }
          }
        }
     }
@@ -1016,6 +1138,7 @@ void simloop ()
           for (sidx = 0; sidx < c->syn_count; sidx++) 
           {
             Syn *s = c->syn + sidx;
+// printf("%d %lf\n",S.stepnum % s->q_count,s->q[S.stepnum % s->q_count]);
             s->G = (double)s->G * s->DCS + s->q[S.stepnum % s->q_count];
             s->q[S.stepnum % s->q_count] = 0;
           }
@@ -1080,7 +1203,7 @@ void simloop ()
       }
     }
 
-    if (S.outsned == 'e')        // save to wave files?
+    if (S.outsned == 'e')   // save waveforms?
     {
        int n, i, spike_count;
        for (n = 0; n < S.plot_count; n++) 
@@ -1159,10 +1282,18 @@ void simloop ()
            case -16:
              S.plot[n].val    = (limit (state.lma, -1, 1) - (p + 1) / 10000.) / ((c + 1) / 10000.);
              break;
+           case -17:
+             // S.plot[n].val    = S.net.fiberpop[p].fiber[c].state;
+             S.plot[n].val    = 0;
+             S.plot[n].spike  = S.net.fiberpop[p].fiber[c].state;
+             break;
+
            default:
-             if (S.plot[n].var < -16)
+             if (S.plot[n].var < -17) // how does this case happen, just insurance?
                break;
-             {
+             //if (S.plot[n].var >= 4)
+             {  // this is case 4 or greater, If 4, inst. pop activity.
+                // if > 4, var is is binwidth in ms. can't have a case 4 or greater. . .
                static struct {int spkcntcnt; int sum; int *spkcntlst;} *cdat;
                static int cdat_size;
                int mult = c + 1;
@@ -1189,6 +1320,8 @@ void simloop ()
                          / (S.net.cellpop[p].cell_count ? S.net.cellpop[p].cell_count : 1));
                S.plot[n].val = spikes_per_second_per_cell / mult;
              }
+             //else
+             //   printf("Unhandled default plot type in simloop\n");
              break;
            }
        }
