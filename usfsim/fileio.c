@@ -359,36 +359,36 @@ tagref (char *tag_string, char *ref_string, StructInfo *v, void *struct_ptr)
   int ptr_index = 0;
 
   if (!ti) {
-    fprintf (stderr, "lookup of tagref %s %s failed\n", v->name, ref_string);
+    fprintf (stdout, "lookup of tagref %s %s failed\n", v->name, ref_string);
     DIE;
   }
   ti += tag_index;
   if (!v->ptr) {
-    fprintf (stderr, "%s is not a pointer, tagref %s %s ignored\n", v->name, ref_string, index_string);
+    fprintf (stdout, "%s is not a pointer, tagref %s %s ignored\n", v->name, ref_string, index_string);
     return;
   }
   if (indirect && !ti->v->ptr) {
     memset (struct_ptr + v->offset, 0, sizeof (void *));
-    fprintf (stderr, "tagref %s %s is indirect, but the target is not a pointer.\nSet to 0.\n", 
+    fprintf (stdout, "tagref %s %s is indirect, but the target is not a pointer.\nSet to 0.\n", 
       v->name, ref_string);
     return;
   }
   if ((direct && ti->v->ptr && v->size != sizeof (void *))
       || (!(direct && ti->v->ptr) && v->size == ti->v->size)) {
     index = 0;
-    fprintf (stderr, "tagref %s %s size does not match size of target.\nUsing index 0.\n", 
+    fprintf (stdout, "tagref %s %s size does not match size of target.\nUsing index 0.\n", 
       v->name, ref_string);
   }
   if (index >= ti->v->count) {
     index = 0;
-    fprintf (stderr, "tagref %s %s index too large, using index 0.\n", 
+    fprintf (stdout, "tagref %s %s index too large, using index 0.\n", 
       v->name, ref_string);
   }
 
   if (indirect && ti->v->count > 1) {
     char *index_string_2 = strtok (0, white);
     if (index_string == 0) {
-      fprintf (stderr, "tagref %s %s is indirect and count > 1, but there is no ptr_index\n", 
+      fprintf (stdout, "tagref %s %s is indirect and count > 1, but there is no ptr_index\n", 
         v->name, ref_string);
       DIE;
     }
@@ -404,7 +404,7 @@ tagref (char *tag_string, char *ref_string, StructInfo *v, void *struct_ptr)
 
   if (indirect && malloc_usable_size (base) < (index + 1) * v->size) {
     index = 0;
-    fprintf (stderr, "tagref %s %s index too large, using index 0.\n", 
+    fprintf (stdout, "tagref %s %s index too large, using index 0.\n", 
       v->name, ref_string);
   }
   memcpy (struct_ptr + v->offset, ti->base + v->size * index, sizeof (void *));
@@ -792,7 +792,7 @@ get_string (FILE *f, int count)
   if (buflen < count + 1)
     TREALLOC (buf, buflen = count + 1);
   if (fread (buf, 1, count + 1, f) != count + 1) {
-    fprintf (stderr, "string count %d is too big\n", count);
+    fprintf (stdout, "string count %d is too big\n", count);
     exit (1);
   }
   buf[count] = 0;
@@ -835,7 +835,7 @@ load_struct (FILE *f, char *struct_name, void *struct_ptr, int ptr_valid)
     if (asprintf (&varname, "%s.%s", struct_name, member_name) == -1) exit (1);
     v = struct_info_fn (varname, strlen (varname));
     if (v == 0) {
-      fprintf (stderr, "load_struct: %s not found in hash\n", varname);
+      fprintf (stdout, "load_struct: %s not found in hash\n", varname);
       continue;
     }
     if (ptr_valid)
@@ -853,7 +853,7 @@ load_struct (FILE *f, char *struct_name, void *struct_ptr, int ptr_valid)
       if (v->count > 1) {
  ref_index_string = strtok (0, white);
  if (ref_index_string == 0) {
-   fprintf (stderr, "tagref %s %s has no indexes\n", v->name, ref_string);
+   fprintf (stdout, "tagref %s %s has no indexes\n", v->name, ref_string);
    DIE;
  }
  ref_index = atoi (ref_index_string);
@@ -921,7 +921,7 @@ load_struct_read_version (FILE *f)
    fscanf(f, "file_format_version %d\n", &format_version);
    Version = format_version;
    if (format_version != FILEIO_FORMAT_VERSION6) {
-      fprintf (stderr, "The format of %s is an earlier version which\nthe simbuild package does not support.\n"
+      fprintf (stdout, "The format of %s is an earlier version which\nthe simbuild package does not support.\n"
         "Use the newsned package to use this file,\nor run simbuild to create a new version of this file.\nThis file will be ignored. Exiting. . .\n",
         load_struct_filename);
     return 0;
@@ -954,7 +954,7 @@ load_struct_read_version_simbuild (FILE *f)
    if (fscanf (f, "file_format_version %d\n", &format_version) != 1)
       return 0;
    if (format_version != FILEIO_FORMAT_VERSION5 && format_version != FILEIO_FORMAT_VERSION6) {
-      fprintf (stderr, "The format version of %s (%d) does not match (it should be %d or %d)\n"
+      fprintf (stdout, "The format version of %s (%d) does not match (it should be %d or %d)\n"
         "The file will be ignored\n",
         load_struct_filename, format_version, FILEIO_FORMAT_VERSION5,FILEIO_FORMAT_VERSION6);
     return 0;

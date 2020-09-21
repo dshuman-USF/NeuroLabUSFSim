@@ -214,11 +214,16 @@ void FiberNode::paint(QPainter *painter, const QStyleOptionGraphicsItem * /* opt
    pen.setColor(fg);
    painter->setPen(pen);
    painter->drawRect(cell);
+   F_NODE* fiber = &D.inode[d_idx].unode.fiber_node;
+   if (fiber->pop_subtype == AFFERENT)
+   {
+      cell = cell.adjusted(-3,-3,3,3);
+      painter->drawRect(cell);
+   }
    brush.setColor(fg);
    brush.setStyle(Qt::SolidPattern);
    pop->setBrush(brush);
    comment->setBrush(brush);
-
    if (isSelected())
    {
       QRectF dash = boundingRect();

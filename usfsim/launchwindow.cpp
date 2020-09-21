@@ -85,7 +85,7 @@ launchWindow::launchWindow(SimWin *parent) : QDialog(parent), ui(new Ui::launchW
    ui->launchBdtList->setAcceptDrops(true);
        // set up the view tables
    ui->launchPlotView->setModel(plotDeskModel);
-   ui->launchPlotView->setItemDelegateForColumn(PLOT_PLOT ,plotDeskCombo);
+   ui->launchPlotView->setItemDelegateForColumn(PLOT_TYPE ,plotDeskCombo);
    ui->launchPlotView->setItemDelegateForColumn(PLOT_BINWID, plotDeskBin);
    ui->launchPlotView->setItemDelegateForColumn(PLOT_SCALE, plotDeskScale);
    ui->launchPlotView->setItemDelegateForColumn(PLOT_MEMB, plotLineEdit);
@@ -102,10 +102,8 @@ launchWindow::launchWindow(SimWin *parent) : QDialog(parent), ui(new Ui::launchW
 
 launchWindow::~launchWindow()
 {
-   saveSettings();
    delete ui;
 }
-   QSettings settings(QSettings::IniFormat, QSettings::UserScope, "simulator","simbuild");
 
 void launchWindow::loadSettings()
 {
@@ -120,6 +118,8 @@ void launchWindow::loadSettings()
       {
          name = QString("launchcol%1").arg(head);
          val = settings.value(name).toInt();
+         if (val == 0)  // ensure visible
+            val = 80;
          ui->launchPlotView->horizontalHeader()->resizeSection(head,val);
       }
       num = ui->launchBdtList->horizontalHeader()->count();
@@ -127,6 +127,8 @@ void launchWindow::loadSettings()
       {
          name = QString("bdtcol%1").arg(head);
          val = settings.value(name).toInt();
+         if (val == 0)
+            val = 80;
          ui->launchBdtList->horizontalHeader()->resizeSection(head,val);
       }
       val = settings.value("selbdt",true).toBool();

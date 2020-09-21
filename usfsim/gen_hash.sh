@@ -1,12 +1,12 @@
 #!/bin/sh
 
 nm=${1%.h}
-i=`cat ${nm}_CPPFLAGS`
+
 #undef INODE_H
 #ifndef OLD_INODE_H
-echo "./tag.pl $1 | cpp $i -DGENHASHDEF=1  -P - -imacros $1 | ./gen_gperf.pl info $1 | gperf -k "*" -t -E -N ${nm}_struct_info -H ihash" > /tmp/gh
-./tag.pl $1 | cpp $i -DGENHASHDEF=1 -P - -imacros $1 | ./gen_gperf.pl info $1 | gperf -k "*" -t -E -N ${nm}_struct_info -H ihash
-./tag.pl $1 | cpp $i -DGENHASHDEF=1 -P - -imacros $1 | ./gen_gperf.pl members $1 | gperf -k "*" -t -E -N ${nm}_struct_members -H mhash
+echo "./tag.pl $1 | cpp -DGENHASHDEF=1  -P - -imacros $1 | ./gen_gperf.pl info $1 | gperf -k "*" -t -E -N ${nm}_struct_info -H ihash" > /tmp/gh
+./tag.pl $1 | cpp -DGENHASHDEF=1 -P - -imacros $1 | ./gen_gperf.pl info $1 | gperf -k "*" -t -E -N ${nm}_struct_info -H ihash
+./tag.pl $1 | cpp -DGENHASHDEF=1 -P - -imacros $1 | ./gen_gperf.pl members $1 | gperf -k "*" -t -E -N ${nm}_struct_members -H mhash
 
 cat > ${nm}_hash.h <<EOF
 struct StructInfo *

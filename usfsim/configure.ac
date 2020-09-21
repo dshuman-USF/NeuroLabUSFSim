@@ -24,7 +24,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([usfsim],[1.0.24],[dshuman@usf.edu])
+AC_INIT([usfsim],[1.0.30a],[dshuman@usf.edu])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([simwin.cpp])
@@ -105,7 +105,13 @@ else
    AC_MSG_NOTICE([The MXE cross development environment is available.])
 fi
 
-
+AC_CHECK_PROGS([WEB_QMAKE],[bogusqmake])
+if test -z "$WEB_QMAKE"; then
+   AC_MSG_WARN([The QT Webassembly development environment is required to build the webassembly version of the usfsim packate (not fatal).])
+else
+   AC_MSG_NOTICE([The AT Webassembly development environment is available.])
+fi
+AM_CONDITIONAL([HAVE_WEB],[test -z "$WEB_QMAKE"])
 
 
 AC_CONFIG_FILES([Makefile])

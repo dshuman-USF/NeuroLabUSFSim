@@ -28,8 +28,10 @@ This file is part of the USF Neural Simulator suite.
 #include <QFileDialog>
 #include <QSortFilterProxyModel>
 #include <QFileSystemModel>
+#include <QItemDelegate>
 #include <iostream>
 #include "simscene.h"
+#include "affmodel.h"
 #include "ui_simwin.h"
 #include "launchwindow.h"
 #include "launch_model.h"
@@ -189,9 +191,22 @@ class SimWin : public QMainWindow
       void showFindItem(QListWidgetItem&);
       void on_actionSave_Model_as_PDF_triggered();
       void on_actionDisplay_Model_as_Monochrome_triggered(bool checked);
+      void on_fiberSendLaunchPlot_clicked();
+      void on_afferentFileButton_clicked();
+      void on_fiberAfferent_clicked(bool checked);
+      void on_fiberAfferentStartFire_valueChanged(const QString &arg1);
+      void on_fiberAfferentNumPop_valueChanged(const QString &arg1);
+      void on_fiberAfferentStopFire_valueChanged(const QString &arg1);
+      void on_afferentFileName_textEdited(const QString &arg1);
+      void on_addAfferentRow_clicked();
+      void on_delAfferentRow_clicked();
+      void on_fiberAffSeed_valueChanged(int arg1);
+      void on_fiberAfferentOffset_valueChanged(int arg1);
+      void on_buildAddLearn_clicked();
 
    protected:
       void keyPressEvent(QKeyEvent *) override;
+      void styleScroll();
 
    private:
       void clearScene();
@@ -205,8 +220,7 @@ class SimWin : public QMainWindow
       void initScene();
       void loadSnd();
       void saveSnd();
-      void saveSim();
-      void doCellRetro();
+      void saveSim(); void doCellRetro();
       void doCellAntero();
       void doFiberRetro();
       void doStdCell(bool);
@@ -218,6 +232,9 @@ class SimWin : public QMainWindow
       void doLungExpiLar(bool);
       void doFiberNormal(bool);
       void doFiberElectric(bool);
+      void doFiberAfferent(bool);
+      void addAfferentRow();
+      void delAfferentRow();
       void doOneShotAdd(bool);
       void addFiberOff();
       void addCellOff();
@@ -234,6 +251,7 @@ class SimWin : public QMainWindow
       void doFiberTypeFixed(bool);
       void doFiberTypeFuzzy(bool);
       void fiberSendToLauncherBdt();
+      void fiberSendToLauncherPlot();
       void cellSendToLauncherBdt();
       void cellSendToLauncherPlot();
       void fitToView();
@@ -251,6 +269,7 @@ class SimWin : public QMainWindow
       void loadSettings();
       void dobuildAddPre();
       void dobuildAddPost();
+      void dobuildAddLearn();
       void doChgLogPrompt(bool flag);
       void timeToQuit();
       void doCreateGroup();
@@ -261,9 +280,12 @@ class SimWin : public QMainWindow
       void doLaunchOnTop(bool);
       void buildFindList();
       void doFindPopulation();
+      void selAfferentFile();
       QString makeChgName(QString sndName);
       bool chkForDrawing();
       void doMonochrome(bool);
+      void affRecToModel(F_NODE*);
+      void affModelToRec(F_NODE*);
 
       bool addFiberToggle=false;
       bool addCellToggle=false;
@@ -284,6 +306,9 @@ class SimWin : public QMainWindow
       findDialog *findDlg=nullptr;
       QString currSndFile;
       QString currSimFile;
+      QScrollArea *scrollArea;
+
+      affModel *afferentModel;
 
       SimScene *scene;
       Ui::SimWin *ui;

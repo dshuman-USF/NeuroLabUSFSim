@@ -32,6 +32,9 @@ extern void writeSpike(int,int);
 extern void writeWave(int,int);
 extern void writeWaveForm(int,int,float);
 extern void writeWaveSpike(int,int);
+extern void openExternalSource(FiberPop *);
+extern bool nextExternalVal(FiberPop*,double*); 
+
 
 #ifdef __cplusplus
 }

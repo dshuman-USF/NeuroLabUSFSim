@@ -29,8 +29,9 @@ size_t malloc_usable_size (void*);
 #define FILEIO_FORMAT_VERSION5 5   // 5 & earlier same to us since all get converted to 5
 #define FILEIO_FORMAT_VERSION6 6   // new for simbuild
 #define FILEIO_SUBV_V61 1
+#define FILEIO_SUBV_V62 2
 #define FILEIO_FORMAT_CURRENT FILEIO_FORMAT_VERSION6
-#define FILEIO_SUBVERSION_CURRENT FILEIO_SUBV_V61
+#define FILEIO_SUBVERSION_CURRENT FILEIO_SUBV_V62
 
 #ifdef __cplusplus
 extern "C" {

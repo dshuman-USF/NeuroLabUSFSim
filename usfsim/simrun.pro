@@ -4,6 +4,7 @@
 #
 #-------------------------------------------------
 
+QT += widgets
 TARGET = simrun
 TEMPLATE = app
 
@@ -29,7 +30,7 @@ win32 {
    DEFINES += S64_NOTDLL 
    DEFINES -= WIN32
    DEFINES += WIN64 
-   QMAKE_CXXFLAGS += -O2 -static -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE
+   QMAKE_CXXFLAGS += -O2 -static -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE -I/usr/local/include
    QMAKE_CLAGS += -static -O2 -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE
    QMAKE_LFLAGS += -static
    OBJECTS_DIR = mswin
@@ -65,6 +66,7 @@ HEADERS += simulator.h \
            expr.h \
            lin2ms.h \
            wavemarkers.h \
-           simrun_wrap.h
+           simrun_wrap.h \
+           common_def.h
 
 

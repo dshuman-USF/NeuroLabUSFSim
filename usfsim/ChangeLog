@@ -1,3 +1,159 @@
+2020-08-27  dshuman@usf.edu
+
+	* configure.ac: Bump to 1.0.29. Time to release.
+
+2020-08-26  dshuman@usf.edu
+
+	* node_mgr.c: Add in function to remove targets from fibers/cells when the
+	target cell has been deleted. Had orphan targets with connectors to
+	nowhere.
+	* usfsim.tex: Add in support for learning synapses.
+
+2020-08-14  dshuman@usf.edu
+
+	* launch_model.cpp: The drag and drop was broken. Rows were copied to the
+	drop location, not moved. Fix was to set the select property to rows, not
+	items. No idea when it changed.
+	* simviewer_impl.cpp: minor bug, fiber # in plot view was always 1, pick up
+	from correct var.
+	* simloop.c: minor bug, check to see if cell or fiber population in plot
+	list exists and provide 0 as data if not.
+	* simloop.c: The first cut as using the plasticity neuron type. 
+
+
+2020-08-10  dshuman@usf.edu
+
+	* sim.c: Check for failure to open script file and fail gracefully.
+
+2020-08-06  dshuman@usf.edu
+
+	* inode.h: Begin adding in learning synapes, Hebbian learning algorithm at
+	first, but going to keep things general in case we use a different algo.
+i 
+
+2020-06-26  dshuman@usf.edu
+
+	* sim2build.cpp: Fix bug in adjusting time in v5 and older v6 files. Test
+	was wrong way. Results in sim time of 0, which means forever.
+
+2020-06-24  dshuman@usf.edu
+
+	* sim_impl.cpp: add stylesheet for the scroll area scrollbars so they won't
+	be confused with the drawing area's.
+	* configure.ac: bump to 1.0.28.
+
+2020-06-19  dshuman@usf.edu
+
+	* launch_impl.cpp: fix lingering problem of the main DB and the plot Db
+	getting out of sync. Changing the fiber type requires changes to the info
+	in the plot view table, or else we wind up indexing to things that do not
+	exist. I don't think this happens with the cells, they all get the same
+	list of plot types.
+	* launch_model.cpp: Put in a check for index into combo box out of bounds,
+	related to the above work.
+
+2020-06-10  dshuman@usf.edu
+
+	* usfsim.tex: Update to include afferent signal documentation.
+
+2020-06-08  dshuman@usf.edu
+
+	* chglog.cpp: addin afferent fiber type change checking.
+	* launch_impl.cpp: change where in close sequence settings are saved. If
+	the OS kills the program, settings could be saved for windows that no
+	longer exist.
+	* simviewer.cpp: ditto
+	* simwin.cpp: ditto
+	* launch_impl.cpp: Pass debug flag to simrun so we can control debug from
+	gui, not just cmd line.
+
+2020-05-21  dshuman@usf.edu
+
+	* simscene.cpp: Add in support for afferent fiber pop type.
+	* simwin.h: ditto.
+	* simwin.cpp: ditto.
+	* simnodes.cpp: ditto. 
+	* simnodes.h: ditto.
+	* sim2build.cpp: ditto.
+	* sim2build.cpp: ditto.
+	* simulator.h: ditto.
+	* build_network.c: ditto.
+	* simloop.c: ditto.
+
+2020-05-11  dshuman@usf.edu
+
+	* sample_cells.c: handle pathological case of an model with, e.g., just one
+	fiber population in it. simrun assumes there is at least one connection. If
+	not, some ptrs are null.
+	* simwin.ui: Tighten the cell param controls so the bottom panel can be
+	seen oin lower-res monitors. It is a bit tight, but at least you can usually
+	see the controls.
+
+2020-05-08  dshuman@usf.edu
+
+	* launch_impl.cpp: fix bug in unlinking files in Windows. If the file does
+	not exit, the delete returns an error we can safely ignore. If an access
+	error, another app has it open or there are permission problems.
+	* launch_impl.cpp: was a path through creating the script?.txt file where
+	two required lines could be left out. Many combinations.
+
+
+2020-05-06  dshuman@usf.edu
+
+	* simscene.cpp: Enable/disable sendto buttons if the fiber or cell has been
+	changed. If you don't apply, what you see is not what gets sent to the
+	launcher tables. Save the changes, then send them.
+	* simscene.cpp: If a fiber pop is changed to estim and the pop is in the
+	bdt and/or pop launcher table and if none of the members are 1, change one
+	to 1. Otherwise, no events will occur because there is only 1 member in an
+	estim pop. Mods to support his.
+	* launch_impl.cpp:  ditto.
+	* configure.ac: bump up to rev 1.0.26
+
+2020-05-01  dshuman@usf.edu
+
+	* simwin.ui: moved the undo and apply buttons from bottom to top. In
+	lower-res monitors, the bottom buttons are sometimes completely hidden. We
+	have more horizontal room than vertical. People will have to relearn.
+	* launchwindow.ui: resize the control regions above the tables. In lower
+	res monitors, sometimes the bottom portion of the controls are cut off.
+
+2020-04-30  dshuman@usf.edu
+
+	* simviewer_impl.cpp: Add fiber pop comment/name to the plot row text
+	instead of always just "Events". Also make the fit-to-screen function
+	actuall do that.
+	* sim.c: missed a check of the smr_wave flag.
+	* launch_impl.cpp: If no bdt file, no file name saved, so _wave.smr file
+	had random filename. Need at least an N for analog info and bdt file name
+	even if not saving a bdt file.
+
+
+2020-04-24  dshuman@usf.edu
+
+	* simviewer_impl.cpp: discover I was doing some calcs, such as the
+	timelines, as ints when the space they are plotted in are reals. This made
+	the time lines jumpy, not moving 1 pixel at a time.
+
+2020-04-23  dshuman@usf.edu
+
+	* fileio.h: Bump up subversion from 1 to 2. The new version adds some stuff
+	that will break earlier versions.
+	* simscene.cpp: Add in support for sending fiber populations to the plot
+	table and support for generating fiber events, plotting them in simviewer,
+	and writing them to the wave files the spike2 smr files.
+	* launch_impl.cpp: ditto.
+	* launch_model.cpp: ditto.
+	* simviewer.h: ditto.
+	* simviewer.h: ditto.
+	* simviewer_impl.cpp: ditto.
+	* simrun_wrap.cpp: ditto.
+	* configure.ac: Bump 10 1.0.25
+
+2020-04-15  dshuman@usf.edu
+
+	* launch_model.cpp: Mods to support sending fiber pops to the plot table.
+
 2020-03-27  dshuman@usf.edu
 
 	* configure.ac: Bump to version 1.0.24.

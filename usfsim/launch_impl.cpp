@@ -37,6 +37,7 @@ This file is part of the USF Neural Simulator suite.
 #include <QMessageBox>
 #include <QString>
 #include <QTextStream>
+#include <QFile>
 
 #include "lin2ms.h"
 #include "ui_launchwindow.h"
@@ -46,12 +47,37 @@ This file is part of the USF Neural Simulator suite.
 #include "fileio.h"
 #include "wavemarkers.h"
 
+extern bool Debug;
+
 using namespace std;
 
 void launchWindow::closeEvent(QCloseEvent *evt)
 {
+   saveSettings();
    launchExit();
    evt->accept();
+}
+
+// If clicking outside of the tables, deselect current selections.
+// Just a visual thing, it looks like you can edit things even 
+// though you cannot.
+void launchWindow::mouseReleaseEvent(QMouseEvent *evt)
+{
+   QModelIndex idx_p = ui->launchPlotView->indexAt(evt->pos());
+   if (!idx_p.isValid())
+   {
+      ui->launchPlotView->selectionModel()->clearSelection();
+      ui->launchPlotView->selectionModel()->clearCurrentIndex();
+   }
+   else
+      cout << " valid" << endl;
+   QModelIndex idx_b = ui->launchBdtList->indexAt(evt->pos());
+   if (!idx_b.isValid())
+   {
+      ui->launchBdtList->selectionModel()->clearSelection();
+      ui->launchBdtList->selectionModel()->clearCurrentIndex();
+   }
+   QDialog::mouseReleaseEvent(evt);
 }
 
 
@@ -168,7 +194,7 @@ void launchWindow::addLungRow()
    plot_row.maxRndVal = 0;
    plot_row.rec[PLOT_POP] = QString();
    plot_row.rec[PLOT_MEMB] = QString();
-   plot_row.rec[PLOT_PLOT] = plot;
+   plot_row.rec[PLOT_TYPE] = plot;
    plot_row.rec[PLOT_BINWID] = binwid;
    plot_row.rec[PLOT_SCALE] = scale;
    plot_row.popType = LUNG_CELL;
@@ -226,77 +252,146 @@ void launchWindow::loadModels()
          pop_type = sp_bv2[row][instance]; // zero based in ctrl, 1 in sim
          member_num = sp_bm2[row][instance];
          pop_id.setNum(pop_num);
-         d_idx = lookupDidx(CELL,pop_num);
-         if (d_idx)
-            maxpop = getMaxPop(d_idx);
+         maxpop = 100; // just in case. . .
+         if (pop_type <= STD_FIBER && pop_type >= LAST_FIBER)
+            d_idx = lookupDidx(FIBER,pop_num);
          else
-            maxpop = 1000; // can this happen?
+            d_idx = lookupDidx(CELL,pop_num);
+         if (d_idx)
+         {
+            maxpop = getMaxPop(d_idx);
+            if (D.inode[d_idx].node_type == CELL)
+            {
+               switch(D.inode[d_idx].unode.cell_node.pop_subtype)
+               {
+                  case BURSTER_POP:
+                     plot_row.popType = BURSTER_CELL;
+                     break;
+                  case PSR_POP:
+                     plot_row.popType = PSR_CELL;
+                     break;
+                  default: 
+                     plot_row.popType = STD_CELL;
+                     break;
+               }
+            }
+            else if (D.inode[d_idx].node_type == FIBER)
+            {
+               switch(D.inode[d_idx].unode.fiber_node.pop_subtype)
+               {
+                  case AFFERENT:
+                     plot_row.popType = AFFERENT_EVENT;
+                     break;
+                  case FIBER:
+                  case ELECTRIC_STIM:
+                  default:
+                     plot_row.popType = STD_FIBER;
+                     break;
+               }
+            }
+         }
+         else
+         {
+            QMessageBox msgBox;
+            msgBox.setIcon(QMessageBox::Warning);
+            msgBox.setWindowTitle("FILES DISAGREE");
+            msgBox.setStandardButtons(QMessageBox::Ok);
+            msgBox.setText("The current .ols and .snd files are out of sync.\nBehavior is undefined.");
+         }
+
          plot_row.maxRndVal = maxpop;  // use member #, don't gen rnd one
 
-         if (pop_type >= 1 && pop_type <= 3)
-         {
-            plot.setNum(pop_type-1); // zero-based
-            member.setNum(member_num);
-         }
-         else
-         {
-            plot = "4";
-            binwid.setNum(pop_type);
-            scale.setNum(member_num);
-         }
 
-         if (pop_type < 0)  // a lung plot
+         if (pop_type < 0 && pop_type > STD_FIBER)  // a lung plot
          {
             plot.setNum(pop_type);
             binwid.setNum(member_num);
+            plot_row.rec[PLOT_CELL_FIB] = LUNG_CELL;
             plot_row.rec[PLOT_POP] = QString(); // blank
             plot_row.rec[PLOT_MEMB] = QString();
-            plot_row.rec[PLOT_PLOT] = plot;
+            plot_row.rec[PLOT_TYPE] = plot;
             plot_row.rec[PLOT_BINWID] = binwid;
             plot_row.rec[PLOT_SCALE] = pop_id;
             plot_row.popType = LUNG_CELL;
          }
-         else
+         else if (pop_type >= 1 && pop_type < 4)
          {
-            if (pop_type >= 1 && pop_type <= 3)
-            {
-               plot.setNum(pop_type-1); // zero-based
-               member.setNum(member_num);
-               plot_row.rec[PLOT_POP] = pop_id;
-               plot_row.rec[PLOT_MEMB] = member;
-               plot_row.rec[PLOT_PLOT] = plot;
-               plot_row.rec[PLOT_BINWID] = QString();
-               plot_row.rec[PLOT_SCALE] = QString();
-            }
-            else
-            {
-               plot = "4";
-               binwid.setNum(pop_type);
-               scale.setNum(member_num);
-               plot_row.rec[PLOT_POP] = pop_id;
-               plot_row.rec[PLOT_MEMB] = QString();
-               plot_row.rec[PLOT_PLOT] = plot;
-               plot_row.rec[PLOT_BINWID] = binwid;
-               plot_row.rec[PLOT_SCALE] = scale;
-            }
-            if (d_idx)
-            {
-               if (D.inode[d_idx].unode.cell_node.pop_subtype == BURSTER_POP)
-                  plot_row.popType = BURSTER_CELL;
-               else if (D.inode[d_idx].unode.cell_node.pop_subtype == PSR_POP)
-                  plot_row.popType = PSR_CELL;
-               else
-                  plot_row.popType = STD_CELL;
-            }
-            else
-            {
-               QMessageBox msgBox;
-               msgBox.setIcon(QMessageBox::Warning);
-               msgBox.setWindowTitle("FILES DISAGREE");
-               msgBox.setStandardButtons(QMessageBox::Ok);
-               msgBox.setText("The current .ols and .snd files are out of sync.\nBehavior is undefined");
-            }
+            plot_row.rec[PLOT_CELL_FIB] = STD_CELL;
+            plot.setNum(pop_type-1); // zero-based index into combo
+            member.setNum(member_num);
+            plot_row.rec[PLOT_POP] = pop_id;
+            plot_row.rec[PLOT_MEMB] = member;
+            plot_row.rec[PLOT_TYPE] = plot;
+            plot_row.rec[PLOT_BINWID] = QString();
+            plot_row.rec[PLOT_SCALE] = QString();
          }
+         else if (pop_type == 4)
+         {
+            plot_row.rec[PLOT_CELL_FIB] = STD_CELL;
+            plot.setNum(pop_type-1); // zero-based index into combo
+            member.setNum(member_num);
+            plot_row.rec[PLOT_POP] = pop_id;
+            plot_row.rec[PLOT_MEMB] = QString();
+            plot_row.rec[PLOT_TYPE] = plot;
+            plot_row.rec[PLOT_BINWID] = QString();
+            plot_row.rec[PLOT_SCALE] = member;
+         }
+         else if (pop_type > 4)
+         {
+            plot_row.rec[PLOT_CELL_FIB] = STD_CELL;
+            plot.setNum(4); // index of item in combo
+            member.setNum(member_num);
+            plot_row.rec[PLOT_POP] = pop_id;
+            plot_row.rec[PLOT_MEMB] = QString();
+            plot_row.rec[PLOT_TYPE] = plot;
+            binwid.setNum(pop_type-4);  // "pop type" is bin width, 5 means 1, etc.
+            plot_row.rec[PLOT_BINWID] = binwid;
+            plot_row.rec[PLOT_SCALE] = member; // no member, so "member" is scale
+         }
+         else if (pop_type <= STD_FIBER && pop_type >= AFFERENT_BOTH)
+         {
+            plot_row.rec[PLOT_CELL_FIB] = STD_FIBER;
+            plot = QString::number(pop_type);
+            member.setNum(member_num);
+            plot_row.rec[PLOT_POP] = pop_id;
+            plot_row.rec[PLOT_MEMB] = member;
+             // if a std fiber was sent to plot table, then
+             // changed to afferent, the plot type is wrong,
+             // and conversely
+            if (plot_row.popType == AFFERENT_EVENT && pop_type == STD_FIBER)
+               plot = QString::number(AFFERENT_EVENT);
+            else if (plot_row.popType == STD_FIBER && pop_type != STD_FIBER)
+               plot = QString::number(STD_FIBER);
+            plot_row.rec[PLOT_TYPE] = plot;
+            plot_row.rec[PLOT_BINWID] = QString();
+            plot_row.rec[PLOT_SCALE] = QString();
+         }
+         else if (pop_type == AFFERENT_INST)
+         {
+            plot_row.rec[PLOT_CELL_FIB] = STD_FIBER;
+            plot = QString::number(pop_type);
+            member.setNum(member_num);
+            plot_row.rec[PLOT_POP] = pop_id;
+            plot_row.rec[PLOT_MEMB] = QString();
+            plot_row.rec[PLOT_TYPE] = plot;
+            plot_row.rec[PLOT_BINWID] = QString();
+            plot_row.rec[PLOT_SCALE] = member;
+         }
+         else if (pop_type == AFFERENT_BIN)
+         {
+            int bin, scale;
+            bin = member_num >> 16;
+            scale = member_num &= 0xffff;
+            plot_row.rec[PLOT_CELL_FIB] = STD_FIBER;
+            plot = QString::number(pop_type);
+            plot_row.rec[PLOT_POP] = pop_id;
+            plot_row.rec[PLOT_MEMB] = QString();
+            plot_row.rec[PLOT_TYPE] = plot;
+            plot_row.rec[PLOT_BINWID] = QString::number(bin);
+            plot_row.rec[PLOT_SCALE] = QString::number(scale);
+         }
+         else
+            cout << "ERROR: Unhandled cell type case in launch_impl." << endl;
          plotDeskModel->addRow(plot_row);
       }
 
@@ -308,10 +403,15 @@ void launchWindow::loadModels()
             pop_type = sp_bcf[row][instance];
             d_idx = lookupDidx(pop_type, pop_num);
             maxpop = getMaxPop(d_idx);
-            // QString pop_type, pop_id, member;
             bdt_row.rec[BDT_CELL_FIB] = pop_type;
             bdt_row.rec[BDT_POP] = pop_num;
             bdt_row.rec[BDT_MEMB] = sp_bm[row][instance];
+            if (pop_type == STD_FIBER && D.inode[d_idx].unode.fiber_node.pop_subtype == ELECTRIC_STIM)
+               bdt_row.rec[BDT_TYPE] = ELECTRIC_STIM;
+            else if (pop_type == STD_FIBER && D.inode[d_idx].unode.fiber_node.pop_subtype == AFFERENT)
+               bdt_row.rec[BDT_TYPE] = AFFERENT;
+            else
+               bdt_row.rec[BDT_TYPE] = 0; // don't care about other types
             bdt_row.maxRndVal = maxpop;
             bdtListModel->addRow(bdt_row,row);
          }
@@ -561,25 +661,34 @@ void launchWindow::notifyViewConnLost(int instance)
    killView();
 }
 
-const char * launchWindow::get_comment1 (int cellpop, int var)
+const char * launchWindow::get_comment1 (int pop, int var)
 {
+  int n;
   if (var >= -16 && var <= -1)
   {
     const char *v[16] = {"Lung Volume", "Flow", "Alveolar Pressure", "Phr_d", "u", "lma", "Vdi", "Vab", "Vdi_t", "Vab_t", "Pdi", "Pab", "PL", "Phr_d_", "u_", "lma_"};
     return v[abs(var) - 1];
   }
-  int n;
-  for (n = 1; n < 99; n++)
-    if (D.inode[n].node_type == CELL && D.inode[n].node_number == cellpop)
+  else if (var <= STD_FIBER && var >= LAST_FIBER)
+  {
+     for (n = 1; n < 99; n++)
+       if (D.inode[n].node_type == FIBER && D.inode[n].node_number == pop)
+         return D.inode[n].comment1;
+  }
+  else
+  {
+    for (n = 1; n < 99; n++)
+      if (D.inode[n].node_type == CELL && D.inode[n].node_number == pop)
       return D.inode[n].comment1;
+  }
   return "";
 }
 
 // Copy the current values in the GUI to the various vars the .sim file needs
 void launchWindow::modelsToVars()
 {
-   plotRec sRec;
-   bdtRec eRec;
+   plotRec pRec;
+   bdtRec bRec;
    analogRec aRec;
    hostNameRec nRec;
    int row, instance, numrecs;
@@ -614,27 +723,57 @@ void launchWindow::modelsToVars()
       numrecs = plotDeskModel->numRecs();
       for (row = 0; row < numrecs; ++row)
       {
-         found = plotDeskModel->readRec(sRec,row);
+         found = plotDeskModel->readRec(pRec,row);
          if (found)
          {
-            int var = sp_bv2[row][instance]=sRec.rec[PLOT_PLOT].toInt();
-            if (var >= 0 && var < 4)
-            {  ++var; // these are 1-based, zero based in the control
-               sp_bpn2[row][instance]=sRec.rec[PLOT_POP].toInt();
-               sp_bm2[row][instance]=sRec.rec[PLOT_MEMB].toInt();
-               sp_bv2[row][instance]=var;
+            int var = pRec.rec[PLOT_TYPE].toInt();
+            if (var >= 0 && var < 3) 
+            {  
+               ++var; // these are 1-based, zero based in the control
+               sp_bpn2[row][instance] = pRec.rec[PLOT_POP].toInt();
+               sp_bm2[row][instance] = pRec.rec[PLOT_MEMB].toInt();
+               sp_bv2[row][instance] = var;
             }
-            else if (var < 0 && var > -17)
-            {
-               sp_bpn2[row][instance]=sRec.rec[PLOT_SCALE].toInt();
-               sp_bm2[row][instance]=sRec.rec[PLOT_BINWID].toInt();
-               sp_bv2[row][instance]=var;
+            else if (var == 3) 
+            {  
+               ++var; // these are 1-based, zero based in the control
+               sp_bpn2[row][instance] = pRec.rec[PLOT_POP].toInt();
+               sp_bm2[row][instance] = pRec.rec[PLOT_SCALE].toInt();
+               sp_bv2[row][instance] = var;
             }
-            else
+            else if (var == 4) //  binned avg
             {
-               sp_bpn2[row][instance]=sRec.rec[PLOT_POP].toInt();
-               sp_bm2[row][instance]=sRec.rec[PLOT_SCALE].toInt();
-               sp_bv2[row][instance]=sRec.rec[PLOT_BINWID].toInt();
+               sp_bpn2[row][instance] = pRec.rec[PLOT_POP].toInt();
+               sp_bm2[row][instance] = pRec.rec[PLOT_SCALE].toInt();
+               sp_bv2[row][instance] = pRec.rec[PLOT_BINWID].toInt()+4; // 1 means 5
+            }
+            else if (var < 0 && var > -17)   // 0 < x < -16
+            {
+               sp_bpn2[row][instance] = pRec.rec[PLOT_SCALE].toInt();
+               sp_bm2[row][instance] = pRec.rec[PLOT_BINWID].toInt();
+               sp_bv2[row][instance] = var;
+            }
+            else if (var <= STD_FIBER && var > AFFERENT_INST)
+            {
+               sp_bpn2[row][instance] = pRec.rec[PLOT_POP].toInt();
+               sp_bm2[row][instance] = pRec.rec[PLOT_MEMB].toInt();
+               sp_bv2[row][instance] = var;
+            }
+            else if (var == AFFERENT_INST)
+            {
+               sp_bpn2[row][instance] = pRec.rec[PLOT_POP].toInt();
+               sp_bm2[row][instance] = pRec.rec[PLOT_SCALE].toInt();
+               sp_bv2[row][instance] = var;
+            }
+            else if (var == AFFERENT_BIN)
+            {
+               int combine;
+               sp_bpn2[row][instance] = pRec.rec[PLOT_POP].toInt();
+               combine = pRec.rec[PLOT_BINWID].toInt();
+               combine = combine << 16;
+               combine |= pRec.rec[PLOT_SCALE].toInt();
+               sp_bm2[row][instance] = combine;
+               sp_bv2[row][instance] = var;
             }
          }
       }
@@ -642,12 +781,12 @@ void launchWindow::modelsToVars()
       numrecs = bdtListModel->numRecs();
       for (row = 0; row < numrecs; ++row)
       {
-         found = bdtListModel->readRec(eRec,row);
+         found = bdtListModel->readRec(bRec,row);
          if (found)
          {
-            sp_bcf[row][instance] = eRec.rec[BDT_CELL_FIB].toInt();
-            sp_bpn[row][instance] = eRec.rec[BDT_POP].toInt();
-            sp_bm[row][instance] = eRec.rec[BDT_MEMB].toInt();
+            sp_bcf[row][instance] = bRec.rec[BDT_CELL_FIB].toInt();
+            sp_bpn[row][instance] = bRec.rec[BDT_POP].toInt();
+            sp_bm[row][instance] = bRec.rec[BDT_MEMB].toInt();
          }
       }
    
@@ -672,6 +811,114 @@ void launchWindow::modelsToVars()
    hostNameModel->setCurrentModel(currModel);
    hostNameMapper->setCurrentIndex(currModel);
    D.baby_lung_flag = ui->lungCheck->isChecked();
+}
+
+// If a standard fiber population is created, its member can be from a range of
+// numbers. If an e-stim population, only member 1 is valid.  This gets called
+// when a fiber rec is modified. Search our various records and make sure the
+// member is 1. This has to be called after the D array has been updated.
+// Since it breaks downstream code, we only change the first one we find in
+// the bdt list. The other non-existent members will never have events, but
+// at least the tools don't break;
+void launchWindow::adjustLaunchFibers()
+{
+   plotRec pRec;
+   bdtRec bRec;
+   bool found, update;
+   int row, instance, numrecs, d_idx;;
+   char trackp[MAX_INODES] = {0};
+   char trackb[MAX_INODES] = {0};
+
+   for (instance = 0; instance < MAX_LAUNCH; ++instance)
+   {
+      plotDeskModel->setCurrentModel(instance);
+      bdtListModel->setCurrentModel(instance);
+
+      numrecs = plotDeskModel->numRecs();
+      for (row = 0; row < numrecs; ++row)
+      {
+         found = plotDeskModel->readRec(pRec,row);
+         if (found)
+         {
+            update = false;
+            if (pRec.rec[PLOT_CELL_FIB].toInt() == STD_FIBER) 
+            {
+               d_idx = lookupDidx(FIBER,pRec.rec[PLOT_POP].toInt());
+               int sub = D.inode[d_idx].unode.fiber_node.pop_subtype;
+               int plot = pRec.rec[PLOT_TYPE].toInt();
+               if (sub == ELECTRIC_STIM)
+               {
+                  if (pRec.popType != STD_FIBER)
+                  {
+                     pRec.popType = STD_FIBER;
+                     update = true;
+                  }
+                  if (!trackp[d_idx] && pRec.maxRndVal != 1)
+                  {
+                     pRec.maxRndVal = 1;
+                     pRec.rec[PLOT_MEMB] = "1";
+                     pRec.rec[PLOT_TYPE] = QString::number(ELECTRIC_STIM);
+                     update = true;
+                  }
+                  trackp[d_idx] = true;
+               }
+               else if (sub == FIBER)
+               {
+                  if (pRec.popType != STD_FIBER)
+                  {
+                     pRec.popType = STD_FIBER;
+                     update = true;
+                  }
+                  if (plot != STD_FIBER)
+                  {
+                     pRec.rec[PLOT_TYPE] = QString::number(STD_FIBER);
+                     update = true;
+                  }
+               }
+               else if (sub == AFFERENT)
+               {
+                  if (pRec.popType != AFFERENT_EVENT)
+                  {
+                     pRec.popType = AFFERENT_EVENT;
+                     update = true;
+                  }
+                  if (plot > AFFERENT_EVENT || plot < AFFERENT_BIN)
+                  {
+                     pRec.rec[PLOT_TYPE] = QString::number(AFFERENT_EVENT);
+                     update = true;
+                  }
+               }
+               if (update)
+                  plotDeskModel->updateRec(pRec,row);
+            }
+         }
+      }
+
+      numrecs = bdtListModel->numRecs();
+      for (row = 0; row < numrecs; ++row)
+      {
+         found = bdtListModel->readRec(bRec,row);
+         if (found)
+         {
+            if (bRec.rec[BDT_CELL_FIB].toInt() == FIBER)
+            {
+               d_idx = lookupDidx(FIBER,bRec.rec[BDT_POP].toInt());
+               if (D.inode[d_idx].unode.fiber_node.pop_subtype == ELECTRIC_STIM && !trackb[d_idx])
+               {
+                  bRec.maxRndVal = 1;
+                  bRec.rec[BDT_MEMB] = "1";
+                  bRec.rec[BDT_TYPE] = QString::number(ELECTRIC_STIM);
+                  bdtListModel->updateRec(bRec,row);
+                  trackb[d_idx] = true;
+               }
+            }
+         }
+      }
+   }
+   ui->launchPlotView->viewport()->update();   // redraw tables
+   ui->launchBdtList->viewport()->update();
+   plotDeskModel->setCurrentModel(currModel);
+   bdtListModel->setCurrentModel(currModel);
 }
 
 int launchWindow::lookupDidx(int type, int pop_num)
@@ -702,13 +949,47 @@ int launchWindow::getMaxPop(int d_idx)
 }
 
 
-int launchWindow::valid (int row, int instance)
+int launchWindow::valid(int row, int instance)
 {
-  int p = sp_bpn2[row][instance];
-  int m = sp_bm2[row][instance];
-  int v = sp_bv2[row][instance];
-  return ((v > 0 && p > 0 && m > 0)
-          || (v >= -16 && v <= -1 && m != 0));
+  int pop = sp_bpn2[row][instance];
+  int memb = sp_bm2[row][instance];
+  int type = sp_bv2[row][instance];
+  bool isvalid = ((type > 0 && pop > 0 && memb > 0) ||
+          (type <= STD_FIBER && type >= LAST_FIBER  && pop > 0 && memb > 0) ||
+          (type >= -16 && type <= -1 && memb != 0));
+  return isvalid;
+}
+
+bool launchWindow::validateFiles()
+{
+   int result = true;
+   for (int node = FIRST_INODE; node <= LAST_INODE; ++node)
+   {
+      if (D.inode[node].node_type == FIBER)
+      {
+         F_NODE *fn = &D.inode[node].unode.fiber_node;
+         if (fn->pop_subtype == AFFERENT && strlen(fn->afferent_file))
+         {
+            QFile test(fn->afferent_file);
+            if (!test.exists())
+            {
+               QMessageBox msgBox;
+               QString msg;
+               QTextStream strm(&msg);
+
+               msgBox.setIcon(QMessageBox::Warning);
+               msgBox.setWindowTitle("FILE NOT FOUND");
+               msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+               strm << "The file " << fn->afferent_file << " does not exists for fiber population number " << D.inode[node].node_number << " " << D.inode[node].comment1 << "\nThis model may have been created on another system. You must find this file on the current system on the Fiber Parameter page.\n\nDo you want to run the simulation anyway?";
+               msgBox.setText(msg);
+               int res =  msgBox.exec();
+               if (res == QMessageBox::No)
+                  return false;
+            }
+         }
+      }
+   }
+   return result;
 }
 
 // This tells simrun to re-read the sim file with, presumably, changed params
@@ -803,6 +1084,8 @@ void launchWindow::launchSim()
 
    if (mainwin->needToSave()) // need to save pending changes?
       mainwin->saveSnd(); // if they cancel the save, the sim may have unexpected results
+   if (!validateFiles())
+      return;
 
    asprintf(&launchN_sim, "spawn%d.sim", currModel);
    Save_sim(launchN_sim,mainwin->currSndFile.toLatin1().data());
@@ -853,7 +1136,7 @@ void launchWindow::launchSim()
       fprintf(script_ptr,"N\n");
 
       // create bdt table file(s)?
-   if (bdt_flag || smr_flag)
+   if (bdt_flag || smr_flag || smr_wave_flag)
    {
       have_rows = false; // has to be at least one entry, make sure
       for (row = 0; row < MAX_ENTRIES; ++row)
@@ -864,7 +1147,7 @@ void launchWindow::launchSim()
          }
       if (have_rows)
       {
-         if (analog_flag==true)
+         if (analog_flag)
          {
             fprintf(script_ptr,"Y\n");
             fprintf(script_ptr,"%d\n",sp_aid[currModel]);
@@ -875,6 +1158,7 @@ void launchWindow::launchSim()
          }
          else
             fprintf(script_ptr,"N\n");
+
          if (fnameSel == EDT)
             fprintf(script_ptr,"spawn%d.edt\n",currModel);
          else
@@ -893,7 +1177,12 @@ void launchWindow::launchSim()
             }
          }
       }
-      fprintf(script_ptr,"\n");
+      else
+      {
+         fprintf(script_ptr,"N\n"); // no bdt, no analog
+         fprintf(script_ptr,"spawn%d.bdt\n",currModel); // need at least a file name
+         fprintf(script_ptr,"\n"); 
+      }
    }
 
    fclose(script_ptr);
@@ -928,15 +1217,19 @@ void launchWindow::launchSim()
    sndMsg.append(MSG_END);
    snd.close();
 
+#ifdef Q_OS_LINUX
+   unlink("nohup.out");
+#endif
+
    if (bdt_flag || smr_flag || wave_flag || socket_flag || smr_wave_flag) // any reason to running sim?
    {
+         unlink("nohup.out");
         // prepare for a new run by cleaning out old files
       char *filename, *cmd=nullptr;
       if (bdt_flag)
       {
          asprintf(&filename, "spawn%d.bdt", currModel);
 #ifdef Q_OS_LINUX
-         unlink("nohup.out");
          unlink(filename);
 #else
          _unlink(filename);
@@ -949,11 +1242,11 @@ void launchWindow::launchSim()
 #ifdef Q_OS_LINUX
          unlink(filename);
 #else
-         bool keep_at_it = true;  // In windows, if viewing in spike2, will not be
+         bool keep_at_it = true;  // In Windows, if viewing in spike2, will not be
          while (keep_at_it)       // able to delete it. Close it (or not).
          {
             int err = _unlink(filename);
-            if (err == -1)
+            if (err == -1 && errno == EACCES)
             {
                QMessageBox msgBox;
                QString msg;
@@ -962,8 +1255,8 @@ void launchWindow::launchSim()
                msgBox.setWindowTitle("File in Use");
                msgBox.setStandardButtons(QMessageBox::Retry | QMessageBox::Yes 
                                        | QMessageBox::No);
-               strm << "The file " << filename << " is in use. The simulation will not be able to create a new one and save results to it.\n"
-                  << "Close it in the app that is using it first , then press the Retry button.\nDo you want to launch the simulation now?";
+               strm << "The file " << filename << " is being used by another program or you do not have permission to delete it. The simulation will not be able to create a new one and save results to it.\n"
+                  << "Close it in the app that is using it first or resolve permission issues, then press the Retry button.\nDo you want to launch the simulation now?";
                msgBox.setText(msg);
                int res =  msgBox.exec();
                if (res == QMessageBox::No)
@@ -1043,6 +1336,8 @@ void launchWindow::launchSim()
       QString simbuild(path);
       simbuild = simbuild.left(simbuild.lastIndexOf("\\"));
       QString simrun = simbuild + "\\simrun.exe";
+      if (Debug)
+         args << "--d";
       QString simviewer = simbuild + "\\simviewer.exe";
       launch->simProc = new SimProc(this,simrun,currModel,true);
       mainwin->printMsg(simrun);

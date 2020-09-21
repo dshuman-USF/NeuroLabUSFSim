@@ -866,7 +866,7 @@ v_zero_fdf (const gsl_vector *x, void *params, gsl_vector *f, gsl_matrix *j)
       printf ("--VL: %g, Vab: %g, u: %g\n", VL, Vab, u);
     }
     if (0)
-      fprintf (stderr, 
+      fprintf (stdout, 
                "double limitVrc = %.17e;\n"
                "double Vrc0 = %.17e;\n"
                "double Crc = %.17e;\n"
@@ -877,7 +877,7 @@ v_zero_fdf (const gsl_vector *x, void *params, gsl_vector *f, gsl_matrix *j)
                "double A = %.17e;\n", limitVrc, Vrc0, Crc, VL + Vdi, Vab, Vsum, Vdi, A);
 
     double sigma_rc = get_sigma_rc (get_Vrc (Vdi, Vab), Vdi_t, Vab_t);
-    //    fprintf (stderr, "get_sigma_rc return\n");
+    //    fprintf (stdout, "get_sigma_rc return\n");
     double f0 = -VL_t * Rrs - sigma_L + (fa + Fdi) * sigma_di + Pica - sigma_rc;
     if (0)
     if (!isfinite (f0))
@@ -1226,7 +1226,7 @@ get_Vdi_diff (double Vab, void *params)
 //  Vdi = Vsum - Vab - A * 1;           /* Vrc_lo */ if (Vdi < Vdi_hi) Vdi_hi = Vdi;
 //  Vdi = Vsum - Vab - A * 16;           /* Vrc_hi */ if (Vdi > Vdi_lo) Vdi_lo = Vdi;
 
-//  fprintf (stderr, "Vrc0 = %.17e, limitVrc = %.17e\n", Vrc0, limitVrc);
+//  fprintf (stdout, "Vrc0 = %.17e, limitVrc = %.17e\n", Vrc0, limitVrc);
   double Vrc_lo = nextafter (Vrc_min, Vrc_max);
   double Vrc_hi = nextafter (Vrc_max, Vrc_min);
 
@@ -1235,12 +1235,12 @@ get_Vdi_diff (double Vab, void *params)
 
   Vdi = D(Vsum) - U(Vab) - U(Vrc_lo) * U(C1);
   if (Vdi < Vdi_hi) Vdi_hi = Vdi;
-  //  fprintf(stderr, "Vdi: %.17e\n", Vdi);
+  //  fprintf(stdout, "Vdi: %.17e\n", Vdi);
   Vdi = U(Vsum) - D(Vab) - D(Vrc_hi) * D(C1);
   if (Vdi > Vdi_lo) Vdi_lo = Vdi;
-//  fprintf(stderr, "Vdi: %.17e\n", Vdi);
-//  fprintf(stderr, "Vdi_lo: %.17e, Vdi_hi: %.17e\n", Vdi_lo, Vdi_hi);
-//  fprintf(stderr, "Vrc_lo: %.17e, Vrc_hi: %.17e\n", Vrc_lo, Vrc_hi);
+//  fprintf(stdout, "Vdi: %.17e\n", Vdi);
+//  fprintf(stdout, "Vdi_lo: %.17e, Vdi_hi: %.17e\n", Vdi_lo, Vdi_hi);
+//  fprintf(stdout, "Vrc_lo: %.17e, Vrc_hi: %.17e\n", Vrc_lo, Vrc_hi);
 
 //  Vdi = (Vsum - Vab - C1 * 0.1) / (C1 + 1); /* VL_lo */ if (Vdi < Vdi_hi) Vdi_hi = Vdi;
 //  Vdi = (Vsum - Vab - C1 * 7.8) / (C1 + 1); /* VL_hi */ if (Vdi > Vdi_lo) Vdi_lo = Vdi;
@@ -1353,7 +1353,7 @@ static_solution (Params *p)
  ERR:
   printf ("no static solution: Phr_d %-20.17g, u: %-20.17g, lma: %-20.17g\n",
           p->Phr_d, p->u, p->lma);
-  //  fprintf (stderr, "no static solution\n");
+  //  fprintf (stdout, "no static solution\n");
   p->Vdi_diff = DBL_MAX;
   
   if (0) {
@@ -1386,7 +1386,7 @@ dVdt (double t, const double y[], double f[], void *params)
   extern time_t global_last_time;
   time_t now;
   if ((now = time (0)) > global_last_time + 1) {
-    fprintf (stderr, " %d %.17g\n", pass, t * 2000);
+    fprintf (stdout, " %d %.17g\n", pass, t * 2000);
     global_last_time = now;
   }
   
@@ -1467,7 +1467,7 @@ dVdt (double t, const double y[], double f[], void *params)
     printf ("Vrc_t   : %-20.17g\n", Vrc_t);
 
     print_params (&p0);
-    fprintf (stderr, ("  xio_0 = %a;\n"
+    fprintf (stdout, ("  xio_0 = %a;\n"
                       "  xio_1 = %a;\n"
                       "  const double y[2] = {%a, %a};\n"
                       "  double f[2];\n"
@@ -1477,7 +1477,7 @@ dVdt (double t, const double y[], double f[], void *params)
     plot_cross (&p0, filename);
     if (1) {
       static_solution (&p0);
-      fprintf (stderr, "static solution at Vdi = %g, Vab = %g\n", p0.Vdi, p0.Vab);
+      fprintf (stdout, "static solution at Vdi = %g, Vab = %g\n", p0.Vdi, p0.Vab);
       static_balance (&p0);
     }
   }
@@ -1767,7 +1767,7 @@ Vdi_vs_Vab (double Vab_0)
     double f1_Vdi = solve (f1_zero_Vdi, VdiFRC - 1, VdiFRC, &p);
     printf ("%g %g %g\n", Vab, f0_Vdi, f1_Vdi);
   }
-  fprintf (stderr, "set xlabel \"Vab\"; plot \"a\" u 1:2 w l t \"f0_Vdi\", \"a\" u 1:3 w l t \"f1_Vdi\", 0\n");
+  fprintf (stdout, "set xlabel \"Vab\"; plot \"a\" u 1:2 w l t \"f0_Vdi\", \"a\" u 1:3 w l t \"f1_Vdi\", 0\n");
   exit (0);
 }
 
@@ -2044,7 +2044,7 @@ main (void)
     for (int i = 0; i < fitparam_count; i++)
       initparam[i] = *fitparam[i];
     Vab_0 = init_spline ();
-    fprintf (stderr, "start\n");
+    fprintf (stdout, "start\n");
     paramgen ();
   }
 
@@ -2140,25 +2140,25 @@ main (void)
         exit (0);
       }
       double dxt = .00000001;
-      fprintf (stderr, "dVdit = %g:\n", dxt);
+      fprintf (stdout, "dVdit = %g:\n", dxt);
       gsl_vector_set (x, 0, x0 + dxt);
       v_zero_fdf (x, &p, f, j);
       double f0d = gsl_vector_get (f, 0);
       double f1d = gsl_vector_get (f, 1);
-      fprintf (stderr, ("df0_dVdit = %.17f\n"
+      fprintf (stdout, ("df0_dVdit = %.17f\n"
                         "         vs %.17f\n"), (f0d - f0) / dxt, df0_dVdit);
-      fprintf (stderr, ("df1_dVdit = %.17f\n"
+      fprintf (stdout, ("df1_dVdit = %.17f\n"
                         "         vs %.17f\n"), (f1d - f1) / dxt, df1_dVdit);
 
-      fprintf (stderr, "dVabt = %g:\n", dxt);
+      fprintf (stdout, "dVabt = %g:\n", dxt);
       gsl_vector_set (x, 0, x0);
       gsl_vector_set (x, 1, x1 + dxt);
       v_zero_fdf (x, &p, f, j);
       double f0a = gsl_vector_get (f, 0);
       double f1a = gsl_vector_get (f, 1);
-      fprintf (stderr, ("df0_dVabt = %.17f\n"
+      fprintf (stdout, ("df0_dVabt = %.17f\n"
                         "         vs %.17f\n"), (f0a - f0) / dxt, df0_dVabt);
-      fprintf (stderr, ("df1_dVabt = %.17f\n"
+      fprintf (stdout, ("df1_dVabt = %.17f\n"
                         "         vs %.17f\n"), (f1a - f1) / dxt, df1_dVabt);
     
       exit (0);
@@ -2182,7 +2182,7 @@ main (void)
     //      double bad[] = {254.43, 6.5257, 16.898, 33.458, 17.382, 5.9212, 1.0383, 35.071, 0.043983, 24.727, 0.18808, 1.3475, 0.1012, 7.6304, 0.40245, 14.907};
     for (int i = 0; i < fitparam_count; i++)
       *fitparam[i] = bad[i];
-    fprintf (stderr, "RV: %g\n", get_RV (0));
+    fprintf (stdout, "RV: %g\n", get_RV (0));
     //Vdi_vs_Vab (Vab_0);
     return 0;
   }
@@ -2343,7 +2343,7 @@ main (void)
     double dxt = 1;
     double dsdi_Vdit;
     double sdi = get_sigma_di (0x0p+0, 0x1.55d5333aa098fp+1, -0x1.9cfd790c2378ep+4 + dxt, &dsdi_Vdit, f);
-    fprintf (stderr, ("dsdi_Vdit = %11.7f\n"
+    fprintf (stdout, ("dsdi_Vdit = %11.7f\n"
                       "         vs %11.7f\n"), (sdi - sdi0) / dxt, dsdi_Vdit0);
     
     exit (0);
@@ -2353,12 +2353,12 @@ main (void)
     double dsab_Vabt0;
     gsl_vector *f = gsl_vector_alloc (2);
     double sab0 = get_sigma_ab (-0x1.6d9c3191611ddp-9, 0x1.0c35b02f32496p+2, -0x1.329010be447f8p+9, &dsab_Vabt0, f);
-    fprintf (stderr, "dsab_Vabt0: %g\n", dsab_Vabt0);
+    fprintf (stdout, "dsab_Vabt0: %g\n", dsab_Vabt0);
     exit (0);
     double dxt = 1;
     double dsab_Vabt;
     double sab = get_sigma_ab (-0x1.6d9c3191611ddp-9, 0x1.0c35b06b8b8afp+2, 0x1.0d8132204d8aap+5 + dxt, &dsab_Vabt, f);
-    fprintf (stderr, ("dsab_dVabt = %11.7f\n"
+    fprintf (stdout, ("dsab_dVabt = %11.7f\n"
                       "          vs %11.7f\n"), (sab - sab0) / dxt, dsab_Vabt0);
     
     exit (0);

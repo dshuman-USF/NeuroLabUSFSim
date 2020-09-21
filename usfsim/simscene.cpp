@@ -78,6 +78,9 @@ SimScene::SimScene(SimWin *parent) : QGraphicsScene(parent)
    synType = new synEdit(this,true);
    synEqPot = new synSpin(this);
    synTc = new synSpin(this);
+   synWindow = new synIntSpin(this,1,2000);
+   synLrnDelta = new synSpin(this);
+   synLrnMax = new synSpin(this);
 
    par->ui->buildSynapsesView->setModel(synBuildModel);
    par->ui->buildSynapsesView->setItemDelegateForColumn(SYN_NUM ,synNum);
@@ -85,16 +88,26 @@ SimScene::SimScene(SimWin *parent) : QGraphicsScene(parent)
    par->ui->buildSynapsesView->setItemDelegateForColumn(SYN_TYPE ,synType);
    par->ui->buildSynapsesView->setItemDelegateForColumn(SYN_EQPOT,synEqPot);
    par->ui->buildSynapsesView->setItemDelegateForColumn(SYN_TC,synTc);
+   par->ui->buildSynapsesView->setItemDelegateForColumn(SYN_LRN_WINDOW,synWindow);
+   par->ui->buildSynapsesView->setItemDelegateForColumn(SYN_LRN_DELTA,synLrnDelta);
+   par->ui->buildSynapsesView->setItemDelegateForColumn(SYN_LRN_MAX,synLrnMax);
    par->ui->buildSynapsesView->setAcceptDrops(false);
    par->ui->buildSynapsesView->expandAll();
+   par->ui->buildSynapsesView->setColumnHidden(SYN_PARENT,true);
    par->ui->buildSynapsesView->header()->setDefaultAlignment(Qt::AlignCenter);
    connect(par->ui->buildSynapsesView->selectionModel(),
            &QItemSelectionModel::currentRowChanged, this, &SimScene::buildRowChg);
    connect(synBuildModel, &QAbstractItemModel::dataChanged, this, &SimScene::buildChg);
 
    par->ui->synapseList->setModel(synBuildModel);
+#if 0
    par->ui->synapseList->hideColumn(SYN_EQPOT);
    par->ui->synapseList->hideColumn(SYN_TC);
+   par->ui->synapseList->hideColumn(SYN_LRN_WINDOW);
+   par->ui->synapseList->hideColumn(SYN_LRN_DELTA);
+   par->ui->synapseList->hideColumn(SYN_LRN_MAX);
+#endif
+   par->ui->synapseList->hideColumn(SYN_PARENT);
    par->ui->buildSynapsesView->setAcceptDrops(false);
    connect(par->ui->synapseList->selectionModel(),
            &QItemSelectionModel::currentRowChanged, this, &SimScene::synSelected);
@@ -355,10 +368,15 @@ void SimScene::addFiber(QPointF pt, int d_idx, bool fromfile)
 
    fiberdata = &D.inode[d_idx].unode.fiber_node;
    popnum = D.inode[d_idx].node_number;
-     // we always add a normal fiber, not other type(s)
+
    strm1 << "Pop" << popnum << endl
-         << fiberdata->f_pop << endl
-         << fiberdata->f_prob;
+         << fiberdata->f_pop << endl;
+   if (fiberdata->pop_subtype == ELECTRIC_STIM)
+      strm1 << "E Stim";
+   else if (fiberdata->pop_subtype == AFFERENT)
+      strm1 << " AFF ";
+   else
+      strm1 << fiberdata->f_prob;
    strm2 << D.inode[d_idx].comment1;
 
    if (!fromfile)
@@ -556,8 +574,53 @@ void SimScene::fiberViewSendToLauncherBdt()
          bdt_row.rec[BDT_CELL_FIB] = FIBER;
          bdt_row.rec[BDT_POP] = pop_id;
          bdt_row.rec[BDT_MEMB] = "0"; // this set later by model
+         if (D.inode[d_idx].unode.fiber_node.pop_subtype == ELECTRIC_STIM)
+            bdt_row.rec[BDT_TYPE] = QString::number(ELECTRIC_STIM);
+         else if (D.inode[d_idx].unode.fiber_node.pop_subtype == AFFERENT)
+            bdt_row.rec[BDT_TYPE] = QString::number(AFFERENT);
+         else
+            bdt_row.rec[BDT_TYPE] = "0";
          bdt_row.maxRndVal = num;
          par->launch->bdtListModel->addRow(bdt_row);
+      }
+   }
+}
+
+
+void SimScene::fiberViewSendToLauncherPlot()
+{
+   plotRec     plot_row;
+   FiberNode* fiber_item;
+   int d_idx, num;
+   QString pop_id;
+
+   auto list = selectedItems();
+   for (auto item = list.cbegin(); item != list.cend(); ++item)
+   {
+      fiber_item = dynamic_cast <FiberNode *>(*item);
+      if (fiber_item)
+      {
+         d_idx = fiber_item->getDidx();
+         pop_id.setNum(D.inode[d_idx].node_number);
+         num = D.inode[d_idx].unode.fiber_node.f_pop;
+
+         plot_row.rec[PLOT_CELL_FIB] = STD_FIBER;
+         plot_row.rec[PLOT_POP] = pop_id;
+         plot_row.rec[PLOT_MEMB] = "0";  // set later in model
+         if (D.inode[d_idx].unode.fiber_node.pop_subtype == AFFERENT)
+         {
+            plot_row.rec[PLOT_TYPE] = QString::number(AFFERENT_EVENT);
+            plot_row.popType = AFFERENT_EVENT;
+         }
+         else
+         {
+            plot_row.rec[PLOT_TYPE] = QString::number(STD_FIBER);
+            plot_row.popType = STD_FIBER;
+         }
+         plot_row.rec[PLOT_BINWID] = "";
+         plot_row.rec[PLOT_SCALE] = "";
+         plot_row.maxRndVal = num;
+         par->launch->plotDeskModel->addRow(plot_row);
       }
    }
 }
@@ -646,6 +709,33 @@ void SimScene::addSynPost()
       }
    }
 }
+
+void SimScene::addSynLearn()
+{
+   synRec rec;
+   int node = getSynapse();
+   if (node > 0)
+   {
+      rec.rec[SYN_NUM] = node;
+      rec.rec[SYN_NAME]  = "Synapse" + QString::number(node);
+      rec.rec[SYN_TYPE]  = SYN_LEARN;
+      rec.rec[SYN_EQPOT] = 0.0;
+      rec.rec[SYN_TC] = 0.0;
+      rec.rec[SYN_LRN_WINDOW] = 4;
+      rec.rec[SYN_LRN_DELTA] = 0.1;
+      rec.rec[SYN_LRN_MAX] = 2;
+      rec.rec[SYN_PARENT] = 0;
+      QModelIndex idx;
+      synBuildModel->addRow(rec,idx);
+      par->ui->buildSynapsesView->expandAll();
+      par->ui->buildSynapsesView->setCurrentIndex(idx);
+      updateInfoText();
+      setBuildDirty(true);
+   }
+   else
+      outOfNodes();
+}
+
 
 void SimScene::delSynType()
 {
@@ -747,6 +837,7 @@ void SimScene::cellViewSendToLauncherBdt()
          bdt_row.rec[BDT_CELL_FIB] = CELL;
          bdt_row.rec[BDT_POP] = pop_id;
          bdt_row.rec[BDT_MEMB] = "0";
+         bdt_row.rec[BDT_TYPE] = "0";
          bdt_row.maxRndVal = num;
          par->launch->bdtListModel->addRow(bdt_row);
       }
@@ -770,9 +861,10 @@ void SimScene::cellViewSendToLauncherPlot()
          pop_id.setNum(D.inode[d_idx].node_number);
          num = D.inode[d_idx].unode.cell_node.c_pop;
 
+         plot_row.rec[PLOT_CELL_FIB] = STD_CELL;
          plot_row.rec[PLOT_POP] = pop_id;
          plot_row.rec[PLOT_MEMB] = "0";  // set later in model
-         plot_row.rec[PLOT_PLOT] = "0";
+         plot_row.rec[PLOT_TYPE] = QString::number(0); // action potential
          plot_row.rec[PLOT_BINWID] = "5";
          plot_row.rec[PLOT_SCALE] = "1";
          plot_row.maxRndVal = num;
@@ -956,8 +1048,12 @@ void SimScene::mngTabs()
          par->ui->fiberTypes->clear();
          if (par->ui->fiberNormal->isChecked())
             par->ui->fiberTypes->addTab(par->ui->fiberNormTab,"Normal Fiber");
-         else
+         else if (par->ui->fiberElectric->isChecked())
             par->ui->fiberTypes->addTab(par->ui->fiberElecTab,"Electric Stimulation");
+         else if (par->ui->fiberAfferent->isChecked())
+            par->ui->fiberTypes->addTab(par->ui->fiberAfferentTab,"Afferent Source");
+         else
+            cout << "bug in mngtabs, unknown checkbox type" << endl;
       }
       else if (cell_item)
       {
@@ -1121,6 +1217,7 @@ void SimScene::fiberUndo()
 {
    int d_idx = par->ui->fiberObjId->text().toInt();
    fiberRecToUi(d_idx);
+   invalidate(sceneRect());
 }
 
 void SimScene::fiberApply()
@@ -1129,6 +1226,7 @@ void SimScene::fiberApply()
    get_maxes(&D);
    setFileDirty(true);
    par->buildFindList();
+   invalidate(sceneRect());
 }
 
 void SimScene::cellUndo()
@@ -1211,7 +1309,7 @@ void SimScene::buildRecToUi()
    QModelIndex idx;
    for (node = 1; node < TABLE_LEN; ++node) // index 0 unused for synapse node
    {
-      if (s->syn_type[node] == SYN_NORM)
+      if (s->syn_type[node] == SYN_NORM || s->syn_type[node] == SYN_LEARN)
       {
          rec.rec[SYN_NUM] = node;
          rec.rec[SYN_NAME]  = s->synapse_name[node];
@@ -1219,6 +1317,18 @@ void SimScene::buildRecToUi()
          rec.rec[SYN_EQPOT] = s->s_eq_potential[node];
          rec.rec[SYN_TC]    = s->s_time_constant[node];
          rec.rec[SYN_PARENT]   = 0;    // no parent
+         if (s->syn_type[node] == SYN_NORM)
+         {
+            rec.rec[SYN_LRN_WINDOW] = QString();
+            rec.rec[SYN_LRN_MAX] = QString();
+            rec.rec[SYN_LRN_DELTA] = QString();
+         }
+         else
+         {
+            rec.rec[SYN_LRN_WINDOW] = s->lrn_window[node];
+            rec.rec[SYN_LRN_MAX] = s->lrn_maxstr[node];
+            rec.rec[SYN_LRN_DELTA] = s->lrn_delta[node];
+         }
          synBuildModel->addRow(rec,idx);
 
       }
@@ -1233,8 +1343,10 @@ void SimScene::buildRecToUi()
          rec.rec[SYN_EQPOT] = s->s_eq_potential[node];
          rec.rec[SYN_TC]    = s->s_time_constant[node];
          rec.rec[SYN_PARENT]   = s->parent[node];
+         rec.rec[SYN_LRN_WINDOW] = QString();
+         rec.rec[SYN_LRN_MAX] = QString();
+         rec.rec[SYN_LRN_DELTA] = QString();
          synBuildModel->addRow(rec,idx);
-
       }
    }
    par->ui->buildSynapsesView->expandAll();
@@ -1252,12 +1364,12 @@ void SimScene::globalsRecToUi()
    par->ui->globPhrenicRecruit->setText(g->phrenic_equation);
    par->ui->globLumbarRecruit->setText(g->lumbar_equation);
    secs = g->sim_length_seconds;
-   fmt.sprintf("%.2f",secs);
+   fmt = QString("%1").arg(secs,0,'f',2);
    par->ui->globLength->setText(fmt);
    step_time = g->step_size;
-   fmt.sprintf("%f",step_time);
+   fmt = QString("%1").arg(step_time,0,'f');
    par->ui->globStepTime->setText(fmt);
-   fmt.sprintf("%f",g->k_equilibrium);
+   fmt = QString("%1").arg(g->k_equilibrium,0,'f');
    par->ui->globKEqPot->setText(fmt);
    if ( fabs(step_time - 0.5) < 0.000001)
    {
@@ -1278,9 +1390,8 @@ void SimScene::globalsRecToUi()
    }
    if (g->ilm_elm_fr == 0)    // old file
       g->ilm_elm_fr = 40.0;   // use default value until user changes it
-   fmt.sprintf("%f",g->ilm_elm_fr);
+   fmt = QString("%1").arg(g->ilm_elm_fr,0,'f');
    par->ui->iLmElmFiringRate->setText(fmt);
-
    setGlobalsDirty(false);
 }
 
@@ -1348,9 +1459,9 @@ void SimScene::buildUiToRec()
    synRec rec;
    S_NODE *s = &D.inode[SYNAPSE_INODE].unode.synapse_node;
    QString name;
-   int idx, type, node;
+   int idx, type, node, window;
    int par_idx = 0;
-   float eq, tc;
+   float eq, tc, str_delta, max_str;
    QModelIndex norm;
    QModelIndex child;
    QModelIndex root;
@@ -1365,8 +1476,23 @@ void SimScene::buildUiToRec()
         const char *str = name.toLocal8Bit().constData();
         memset(s->synapse_name,0,SNMLEN);
         strncpy(s->synapse_name[idx],str,SNMLEN-1);
+        if (type == SYN_LEARN)
+        {
+           window = rec.rec[SYN_LRN_WINDOW].toInt();
+           str_delta = rec.rec[SYN_LRN_DELTA].toFloat();
+           max_str = rec.rec[SYN_LRN_MAX].toFloat();
+        }
+        else
+        {
+           window = 0;
+           str_delta = 0;
+           max_str = 0;
+        }
         s->s_eq_potential[idx] = eq;
         s->s_time_constant[idx] = tc;
+        s->lrn_window[idx] = window;
+        s->lrn_delta[idx] = str_delta;
+        s->lrn_maxstr[idx] = max_str;
         s->syn_type[idx] = static_cast<char>(type);
     };
 
@@ -1397,7 +1523,7 @@ void SimScene::buildUiToRec()
    setBuildDirty(false);
 }
 
-// Copy controls to D array
+// Copy D array values to controls
 void SimScene::fiberRecToUi(int d_idx, int sel)
 {
    F_NODE* fiber = &D.inode[d_idx].unode.fiber_node;
@@ -1424,6 +1550,19 @@ void SimScene::fiberRecToUi(int d_idx, int sel)
       par->ui->fiberElectric->setChecked(true);
       par->ui->fiberElectricFreq->setValue(fiber->frequency);
       par->ui->fiberElectricFuzzyRange->setValue(fiber->fuzzy_range);
+   }
+   else if (fiber->pop_subtype == AFFERENT)
+   {
+      par->ui->fiberTypes->addTab(par->ui->fiberAfferentTab,"Afferent Source");
+      par->ui->fiberAfferentOffset->setValue(fiber->offset);
+      par->ui->fiberAffSeed->setValue(fiber->f_seed);
+      par->ui->fiberAfferent->setChecked(true);
+      par->ui->afferentFileName->setText(fiber->afferent_file);
+      par->ui->fiberAfferentStartFire->setValue(fiber->f_begin/1000.0);
+      par->ui->fiberAfferentNumPop->setValue(fiber->f_pop);
+      fiber->f_end < 0 ?  par->ui->fiberAfferentStopFire->setValue(fiber->f_end) :
+                          par->ui->fiberAfferentStopFire->setValue(fiber->f_end/1000.0);
+      par->affRecToModel(fiber);
    }
    else
    {
@@ -1486,8 +1625,29 @@ void SimScene::fiberUiToRec()
             << endl << fiber->f_pop  << endl
             << "E Stim";
    }
+   else if (par->ui->fiberAfferent->isChecked())
+   {
+      fiber->pop_subtype = AFFERENT;
+      fiber->f_seed = par->ui->fiberAffSeed->value();
+      fiber->f_begin = par->ui->fiberAfferentStartFire->value() * 1000.0;
+      fiber->f_pop = par->ui->fiberAfferentNumPop->value();
+      if (fiber->f_pop ==1) // see note above
+         fiber->f_pop = 100;
+      fiber->offset = par->ui->fiberAfferentOffset->value();
+      par->ui->fiberAfferentStopFire->value() < 0 ?
+             fiber->f_end = par->ui->fiberAfferentStopFire->value() : 
+             fiber->f_end = round(par->ui->fiberAfferentStopFire->value()*1000.0); 
+      strm1 << "Pop" << node_num
+            << endl << fiber->f_pop  << endl
+            << " AFF ";
+      memset(fiber->afferent_file, 0, sizeof(fiber->afferent_file));
+      memset(fiber->afferent_prog, 0, sizeof(fiber->afferent_prog));
+      strncpy(fiber->afferent_file,par->ui->afferentFileName->text().toLatin1().data(),sizeof(fiber->afferent_file)-1);
+      par->affModelToRec(fiber);
+   }
    else
       cout << "There is an unknown type of fiber pop in simscene" << endl;
+   par->launch->adjustLaunchFibers();
    def_fiber.unode.fiber_node  = *fiber;
 
    memset(D.inode[d_idx].comment1, 0, sizeof(D.inode[d_idx].comment1));
@@ -2034,39 +2194,50 @@ void SimScene::sceneMove()
    setFileDirty(true);
 }
 
+
+void SimScene::setSendControls()
+{
+   par->ui->cellSendLaunchBdt->setEnabled(!cellDirty);
+   par->ui->cellSendLaunchPlot->setEnabled(!cellDirty);
+   par->ui->fiberSendLaunchBdt->setEnabled(!fiberDirty);
+   par->ui->fiberSendLaunchPlot->setEnabled(!fiberDirty);
+}
+
 void SimScene::setCellDirty(bool flag)
 {
+   cellDirty = flag;
    par->ui->cellUndo->setEnabled(flag);
    par->ui->cellApply->setEnabled(flag);
-   cellDirty = flag;
+   setSendControls();
 }
 
 void SimScene::setFiberDirty(bool flag)
 {
+   fiberDirty = flag;
    par->ui->fiberUndo->setEnabled(flag);
    par->ui->fiberApply->setEnabled(flag);
-   fiberDirty = flag;
+   setSendControls();
 }
 
 void SimScene::setSynapseDirty(bool flag)
 {
+   synapseDirty = flag;
    par->ui->synapseUndo->setEnabled(flag);
    par->ui->synapseApply->setEnabled(flag);
-   synapseDirty = flag;
 }
 
 void SimScene::setBuildDirty(bool flag)
 {
+   buildDirty = flag;
    par->ui->buildUndo->setEnabled(flag);
    par->ui->buildApply->setEnabled(flag);
-   buildDirty = flag;
 }
 
 void SimScene::setGlobalsDirty(bool flag)
 {
+   globalsDirty = flag;
    par->ui->globUndo->setEnabled(flag);
    par->ui->globApply->setEnabled(flag);
-   globalsDirty = flag;
 }
 
 bool SimScene::allChkDirty()

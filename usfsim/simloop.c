@@ -17,7 +17,6 @@ This file is part of the USF Neural Simulator suite.
 */
 #define _GNU_SOURCE
 
-#include <QtGlobal>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -44,6 +43,7 @@ This file is part of the USF Neural Simulator suite.
 #include "lin2ms.h"
 #include "wavemarkers.h"
 #include "simrun_wrap.h"
+#include "common_def.h"
 
 #ifdef __linux__
 extern int sock_fd;
@@ -72,9 +72,6 @@ time_t global_last_time;
 extern void destroy_cmd_socket();
 extern void destroy_view_socket();
 
-struct StructInfo *(*struct_info_fn) (const char *str, unsigned int len) = simulator_struct_info;
-struct StructMembers *(*struct_members_fn) (const char *str, unsigned int len) = simulator_struct_members;
-
 /*
 ; exp(-.5/2)
         0.77880078307140486825
@@ -90,7 +87,7 @@ static const double E_L = -65;
 
 char wave_buf[1024*64];
 
-bool have_cmd_socket()
+int have_cmd_socket()
 {
 #ifdef __linux__
   if (sock_fd)
@@ -102,7 +99,7 @@ bool have_cmd_socket()
     return 0;
 }
 
-bool have_data_socket()
+int have_data_socket()
 {
 #ifdef __linux__
   if (sock_fdout)
@@ -114,77 +111,6 @@ bool have_data_socket()
     return 0;
 }
 
-// this was for initial testing on ways to use afferent inputs 
-#if 0
-typedef struct { double x;  // bp or other value
-                double y;  // probabilty for this value
-               } Points;
-
-static const double bpl = 120;
-static const double bp0 = 140;
-static const double bph = 160;
-
-//static const double pl = 0.0;
-//static const double p0 = 0.5;
-//static const double ph = 0.9;
-
-static const double pl = 0.00;
-static const double p0 = 0.05;
-static const double ph = 0.08;
-
-static double Hz = 3.0;
-
-Points pts[] = {{bpl,pl},{bp0,p0},{bph,ph}};
-
-// function to interpolate the given data points using linear interpolation.
-// xi corresponds to the new data point whose value is to be obtained
-// n represents the number of known data points
-// Data is the array with the points
-static double interpolate(Points f[], double xi, int n)
-{
-   double result = 0; 
-   for (int i=0; i<n; i++)
-   {
-      // Compute individual terms of above formula
-      double term = f[i].y; 
-      for (int j=0 ; j<n; j++) 
-      {
-         if (j!=i) 
-            term = term * (xi - f[j].x) / (f[i].x - f[j].x);
-      }
-      result += term; 
-   }
-   return result;
-}
-
-static Points *Prob;
-static size_t ProbLen;
-
-// figure out # of ticks for Hz seconds, then calculate sine values from 0 to
-// 2pi for that many slots
-static void makeProb()
-{
-   unsigned int ticks_in_sec = ceil(1000.0/S.step);
-   ProbLen = ticks_in_sec * Hz;
-   int len = sizeof(pts)/sizeof(Points);
-   printf("ts: %u steps: %lu len: %d\n",ticks_in_sec, ProbLen,len);
-   Prob = (Points*) malloc(ProbLen*sizeof(Points));
-   Points *prob = Prob;
-   double val, res;
-   double stepsize = (2*M_PI)/ProbLen;
-   int slots = 0;
-   for (double i = 0.0;  slots < ProbLen ; i+= stepsize, ++slots)
-   {
-      val = sin(i) * ((bph-bpl)/2.0)+bp0; // scale to 120 - 160
-      res = interpolate(pts,val,len);
-      printf("%lf %lf %lf\n",i,val,res);
-      prob->x = val;
-      prob->y = res;
-      ++prob;
-   }
-}
-#endif
-
 // Given current afferent input value for a fiber pop, return
 // the corresponding probabilty using linear interpolation
 // on the value to probability lookup table for this population.
@@ -194,11 +120,12 @@ static double interpolate(FiberPop *fp, double curr_val)
    int num = fp->num_aff - 1;
    int idx;
    double result = 0.0; 
+
    for (idx = 0; idx < num; ++idx)
    {
       if (curr_val >= fp->aff_val[idx] && curr_val < fp->aff_val[idx+1])
-      {   
-         result = (fp->aff_prob[idx+1]  - fp->aff_prob[idx]) 
+      {
+         result = (fp->aff_prob[idx+1] - fp->aff_prob[idx]) 
                   / (fp->aff_val[idx+1] - fp->aff_val[idx])
                   * (curr_val - fp->aff_val[idx]) + fp->aff_prob[idx];
          break;
@@ -224,8 +151,8 @@ static void send_wave()
       sent = send(sock_fdout, (void*)ptr,to_send,0); // blocking i/o
       if (sent == -1 && errno == EPIPE) // lost connection
       {
-         fprintf(stderr,"SIMRUN: Connection to simviewer lost.\n");
-         fflush(stderr);
+         fprintf(stdout,"SIMRUN: Connection to simviewer lost.\n");
+         fflush(stdout);
          destroy_view_socket();
          return;
       }
@@ -245,10 +172,10 @@ static void send_wave()
       {
          int sockerr = WSAGetLastError();
          if (sockerr == WSAECONNRESET || sockerr == WSAECONNABORTED)
-            fprintf(stderr,"Connection to simviewer lost.\n");
+            fprintf(stdout,"Connection to simviewer lost.\n");
          else
-            fprintf(stderr,"Socket error is %d\n",sockerr);
-         fflush(stderr);
+            fprintf(stdout,"Socket error is %d\n",sockerr);
+         fflush(stdout);
          destroy_view_socket(); // most errors are fatal
          return;
       }
@@ -333,9 +260,9 @@ simoutsned (void)
         buffptr += strlen(line);
         if (write_smr_wave)
         {
-           if (S.plot[n].var != -17) // no waveforms for events
+           if (S.plot[n].var != STD_FIBER && S.plot[n].var != AFFERENT_EVENT && S.plot[n].var != AFFERENT_BOTH)
               writeWaveForm(n,time,S.plot[n].val);
-           if (S.plot[n].spike)
+           if (S.plot[n].var != AFFERENT_SIGNAL && S.plot[n].var != AFFERENT_BOTH && S.plot[n].spike)
               writeWaveSpike(n, time);
         }
       }
@@ -356,9 +283,9 @@ simoutsned (void)
         fprintf (wfile, "%12.8f %d\n", S.plot[n].val, S.plot[n].spike);
         if (write_smr_wave)
         {
-           if (S.plot[n].var != -17)
+           if (S.plot[n].var != STD_FIBER && S.plot[n].var != AFFERENT_EVENT && S.plot[n].var != AFFERENT_BOTH)
               writeWaveForm(n,time,S.plot[n].val);
-           if (S.plot[n].spike)
+           if (S.plot[n].var != AFFERENT_SIGNAL && S.plot[n].var != AFFERENT_BOTH && S.plot[n].spike)
               writeWaveSpike(n, time);
         }
       }
@@ -381,10 +308,10 @@ simoutsned (void)
     }
     if (write_smr_wave)
     {
-       if (S.plot[n].var != -17)
+       if (S.plot[n].var != STD_FIBER && S.plot[n].var != AFFERENT_EVENT && S.plot[n].var != AFFERENT_BOTH)
           writeWaveForm(n,time,S.plot[n].val);
-       if (S.plot[n].spike)
-         writeWaveSpike(n, time);
+       if (S.plot[n].var != AFFERENT_SIGNAL && S.plot[n].var != AFFERENT_BOTH && S.plot[n].spike)
+          writeWaveSpike(n, time);
     }
   }
   if (++recctr == nrecs) 
@@ -655,15 +582,15 @@ void chk_for_cmd()
     got = recv(sock_fd,msg,sizeof(msg),MSG_DONTWAIT);
     if (got == 0 && errno == EPIPE)
     {
-      fprintf(stderr,"Connection to simbuild lost.\n");
-      fflush(stderr);
+      fprintf(stdout,"Connection to simbuild lost.\n");
+      fflush(stdout);
       destroy_cmd_socket();
       return;
     }
     else if (got == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
     {
-     fprintf(stderr,"SIMRUN: Error getting msg from simbuild, error is: %d\n",errno);
-      fflush(stderr);
+     fprintf(stdout,"SIMRUN: Error getting msg from simbuild, error is: %d\n",errno);
+      fflush(stdout);
     }
 #else
     got = recv(sock_fd,msg,sizeof(msg),0); // was set to nonblocking in setup
@@ -674,11 +601,11 @@ void chk_for_cmd()
       {
         if (err != WSAECONNRESET)  // simviewer went away
         {
-          fprintf (stderr,"Error getting msg from simbuild, error is: %d\n",WSAGetLastError());
+          fprintf (stdout,"Error getting msg from simbuild, error is: %d\n",WSAGetLastError());
         }
         else
-          fprintf(stderr,"Connection to simbuild lost.\n");
-        fflush(stderr);
+          fprintf(stdout,"Connection to simbuild lost.\n");
+        fflush(stdout);
         destroy_cmd_socket();
         return;
       }
@@ -687,14 +614,14 @@ void chk_for_cmd()
     if (msg[0] == 'P') // pause
     {
       pause = true;
-      fprintf(stderr,"Pausing\n");
-      fflush(stderr);
+      fprintf(stdout,"Pausing\n");
+      fflush(stdout);
     }
     else if (msg[0] == 'R')  // resume
     {
       pause = false;
-      fprintf(stderr,"Starting back up\n");
-      fflush(stderr);
+      fprintf(stdout,"Starting back up\n");
+      fflush(stdout);
     }
     else if (msg[0] == 'U') // update
     {
@@ -704,13 +631,13 @@ void chk_for_cmd()
     {
       sigterm = true;
       pause = false;
-      fprintf(stderr,"simrun got terminate command\n");
-      fflush(stderr);
+      fprintf(stdout,"simrun got terminate command\n");
+      fflush(stdout);
     }
     else if (msg[0] != 0) // unknown msg
     {
-      fprintf(stderr,"Got unknown command %c\n",msg[0]);
-      fflush(stderr);
+      fprintf(stdout,"Got unknown command %c\n",msg[0]);
+      fflush(stdout);
     }
     if (pause) // .5 sec
     {
@@ -718,6 +645,121 @@ void chk_for_cmd()
                       // without unpausing us, but we could also be
     }                 // paused over the weekend, so there is no "too long"
   } while (pause);
+}
+
+static void decayLearnCells()
+{
+   CellPop *cp = S.net.cellpop;
+   for (int pn = 0; pn < S.net.cellpop_count; pn++,++cp)
+   {
+       Cell *c = cp->cell;
+       for (int cn = 0; cn < cp->cell_count; cn++, ++c) 
+       {
+           Target *target = c->target;
+           for (int tidx = 0; tidx < c->target_count; tidx++, ++target)
+           {
+              Syn *syn = target->syn;
+              if (S.net.syntype[syn->stidx].SYN_TYPE == SYN_LEARN)
+              {
+                 LEARN *lrn_ptr = syn->lrn;
+                 for (int slot = 0; slot < syn->lrn_size; ++slot,++lrn_ptr)
+                 {
+                    if (lrn_ptr->recv_pop != LRN_FREE)
+                    {
+                       if (lrn_ptr->ariv_time <= 1)  // remove
+                       {
+                          lrn_ptr->recv_pop = LRN_FREE;
+                          lrn_ptr->send_term = 0;
+                          lrn_ptr->recv_term = 0;
+                          lrn_ptr->ariv_time = 0;
+                       }
+                       else
+                          --lrn_ptr->ariv_time;
+                    }
+                 }
+              }
+           }
+       }
+    }
+}
+
+// Sender has fired, add to target history
+static void updateLrnSyns(Target *target, Syn* syn, int sender)
+{
+   LEARN *lrn_ptr = syn->lrn;
+   bool found = false;
+   int slot, old_size, new_size;
+
+   for (slot = 0; slot < syn->lrn_size; ++slot,++lrn_ptr)
+   {
+      if (lrn_ptr->recv_pop == LRN_FREE)
+      {
+         found = true;
+         break;
+      }
+   }
+   if (!found) // grow the array, init the new slots
+   {
+      old_size = syn->lrn_size;
+      new_size = old_size  + LRN_GROWBY;
+      syn->lrn_size = new_size;
+      lrn_ptr = realloc(target->syn->lrn,sizeof(LEARN) *new_size);
+      target->syn->lrn = lrn_ptr;
+      lrn_ptr += old_size; // skip to start of new slots
+      for (slot = old_size; slot < new_size; ++slot,++lrn_ptr)
+      {
+        lrn_ptr->recv_pop = LRN_FREE;
+        lrn_ptr->send_term = 0;
+        lrn_ptr->recv_term = 0;
+        lrn_ptr->ariv_time = 0;
+      }
+
+      lrn_ptr = target->syn->lrn + old_size; // 1st new slot
+   }
+   lrn_ptr->send_term = sender;
+   lrn_ptr->recv_pop = syn->cpidx;
+   lrn_ptr->recv_term = syn->cidx;
+   // the fortran program from the MacG book generated a random number
+   // between 1 and the conductance time. We more or less have already
+   // done with the target->delay calculation for each terminal.
+   lrn_ptr->ariv_time = target->delay + 1 + syn->lrnWindow; 
+}
+
+
+static void decayLearnFibers()
+{
+   FiberPop *p = S.net.fiberpop;
+   for (int pn = 0; pn < S.net.fiberpop_count; pn++,++p)
+   {
+       Fiber *f = p->fiber;
+       for (int fn = 0; fn < p->fiber_count; fn++, ++f) 
+       {
+           Target *target = f->target;
+           for (int tidx = 0; tidx < f->target_count; tidx++, ++target)
+           {
+              Syn *syn = target->syn;
+              if (S.net.syntype[syn->stidx].SYN_TYPE == SYN_LEARN)
+              {
+                 LEARN *lrn_ptr = syn->lrn;
+                 for (int slot = 0; slot < syn->lrn_size; ++slot,++lrn_ptr)
+                 {
+                    if (lrn_ptr->recv_pop != LRN_FREE)
+                    {
+                       if (lrn_ptr->ariv_time <= 1) 
+                       {
+                          lrn_ptr->recv_pop = LRN_FREE;
+                          lrn_ptr->send_term = 0;
+                          lrn_ptr->recv_term = 0;
+                          lrn_ptr->ariv_time = 0;
+                       }
+                       else
+                          --lrn_ptr->ariv_time;
+                    }
+                 }
+              }
+           }
+       }
+    }
 }
 
 /* This is the simulation calculation engine.
@@ -728,12 +770,13 @@ void simloop ()
   double noise_decay = exp (-S.step / 1.5);
   S.seed = 314159;
   double ticks_in_sec = ceil(1000.0/S.step);
-  char msg[2048];
+  char msg[2048]={0};
   bool lung_is_used = check_lung_used ();
   bool doFibCalc, skipFib;
   MotorPops m;
+  double signal;
   if (Debug)
-    fprintf (stderr, "\n%s line %d, cellpop_count %d\n", __FILE__, __LINE__,
+    fprintf (stdout, "\n%s line %d, cellpop_count %d\n", __FILE__, __LINE__,
              S.net.cellpop_count);
 
   if (lung_is_used) 
@@ -744,35 +787,35 @@ void simloop ()
       S.lumbar_equation = strdup ("L0/20");
     m = get_motor_pops ();
 
-    fprintf(stderr,"motor pops are: phrenic");
+    fprintf(stdout,"motor pops are: phrenic");
     for (int i = 0; i < m.phrenic.count; i++)
       if (m.phrenic.num[i] >= 0)
-        fprintf(stderr," %d", m.phrenic.num[i] + 1);
-    fprintf(stderr,", abdominal");
+        fprintf(stdout," %d", m.phrenic.num[i] + 1);
+    fprintf(stdout,", abdominal");
     for (int i = 0; i < m.abdominal.count; i++)
       if (m.abdominal.num[i] >= 0)
-        fprintf(stderr," %d", m.abdominal.num[i] + 1);
-    fprintf (stderr,", elm/ta %d, ilm/pca %d", m.ta.num[0] + 1, m.pca.num[0] + 1);
+        fprintf(stdout," %d", m.abdominal.num[i] + 1);
+    fprintf (stdout,", elm/ta %d, ilm/pca %d", m.ta.num[0] + 1, m.pca.num[0] + 1);
 #ifdef INTERCOSTALS
-    fprintf(stderr,", ext %d, int %d", m.ta.num[0] + 1, m.pca.num[0] + 1, m.inspic.num[0] + 1, m.expic.num[0] + 1);
+    fprintf(stdout,", ext %d, int %d", m.ta.num[0] + 1, m.pca.num[0] + 1, m.inspic.num[0] + 1, m.expic.num[0] + 1);
 #endif
-    fprintf(stderr,"\n");
+    fprintf(stdout,"\n");
     
     state = lung ((Motor) {0,0,0,0}, S.step);
   }
   else 
-     fprintf(stderr,"Lung model is not used\n");
+     fprintf(stdout,"Lung model is not used\n");
   if (Debug)
   {
-     fprintf (stderr, "\n%s line %d, cellpop_count %d\n", __FILE__, __LINE__,
+     fprintf (stdout, "\n%s line %d, cellpop_count %d\n", __FILE__, __LINE__,
                S.net.cellpop_count);
-     fprintf (stderr, "\n%s line %d\n", __FILE__, __LINE__);
+     fprintf (stdout, "\n%s line %d\n", __FILE__, __LINE__);
   }
 
    // MAIN LOOP, work until done or get a TERM signal or get a quit command
   for ( ; S.stepnum < S.step_count && !sigterm; S.stepnum++) 
   {
-    double GEsum0;
+    double GEsum0; // debug var
     int pn;
     static time_t now, last_time = 0;
 
@@ -808,17 +851,19 @@ void simloop ()
       for (cn = 0; cn < p->cell_count; cn++) 
       {
         Cell *c = p->cell + cn;
+
         double Gsum = 0, GEsum = 0, Prob = 0, Vm, Gk;
         int sidx, tidx, pp_idx;
 
         for (sidx = 0; sidx < c->syn_count; sidx++) 
         {
           Syn *s = c->syn + sidx;
+
           if (S.ispresynaptic) 
           {
             int type_of_syn = S.net.syntype[s->stidx].SYN_TYPE;
             if (type_of_syn == SYN_NOT_USED) // you've got a bug
-              fprintf(stderr,"Unexpected unused synapse in simloop\n");
+              fprintf(stdout,"Unexpected unused synapse in simloop\n");
             if (type_of_syn == SYN_NORM)
             {
                Syn *chk = c->syn;
@@ -835,17 +880,37 @@ void simloop ()
                      }
                   }
                }
+                // Normalize Conductance sum += syn Normalized Conductance
+                // * Post syn Normalized Conductance or 1
                Gsum += s->G * post;
+
+               // Excitatory Conductance sum += syn Normalized Conductance
+               // * Post syn Normalized Conductance or 1 
+               // * (syn Equlibrium Potentential - offset if burster)
                GEsum += s->G * post * (s->EQ - (p->pop_subtype  == BURSTER_POP ? 65. : 0));
+
                if (p->pop_subtype == PSR_POP) 
+                  // for pulmonary stretch receptor
+                  // Probabilty += syn Normalized Conductance
+                  // * post syn Normalized Conductance or 1
+                  // * 1 / syn Decay of Potential in a Compartment
+                  // NOTE: Prob is always zero except for this case.
                   Prob += s->G * post * (1. - s->DCS); /* PSR or other external object */
             }
           }
-          else 
+          else  // NOT pre/post synaptic
           {
+            // Normalize Conductance sum += syn Normalized Conductance
             Gsum += s->G;
+
+            // Excitatory Conductance sum += syn Normalized Conductance
+            // * (syn Equlibrium Potentential - offset if burster)
             GEsum += (double)s->G * (s->EQ - (p->pop_subtype == BURSTER_POP ? 65. : 0));
+
             if (p->pop_subtype == PSR_POP) 
+               // for pulmonary stretch receptor
+               // probabilty += syn Normalized Conductance
+               // * 1 / syn Decay of Potential in a Compartment
                Prob += s->G * (1. - s->DCS); /* PSR or other external object */
            }
         }
@@ -857,51 +922,90 @@ void simloop ()
           double ranval;
           double gnoise_e = c->gnoise_e;
           double gnoise_i = c->gnoise_i;
-          
           gnoise_e *= noise_decay;
           gnoise_i *= noise_decay;
           if ((ranval = ran (&p->noise_seed)) < NOISE_FIRING_PROBABILITY)
             gnoise_e += p->noise_amp;
           if ((ranval = ran (&p->noise_seed)) < NOISE_FIRING_PROBABILITY)
             gnoise_i += p->noise_amp;
+          // Excitatory Conductance sum += some noise
           Gsum += gnoise_e + gnoise_i;
+          // Excitatory Conductance sum += some noise
           GEsum += gnoise_e * ( NOISE_EQ - (p->pop_subtype == BURSTER_POP ? 65. : 0));
           GEsum += gnoise_i * (-NOISE_EQ - (p->pop_subtype == BURSTER_POP ? 65. : 0));
           c->gnoise_e = gnoise_e;
           c->gnoise_i = gnoise_i;
         }
-        GEsum0 = GEsum;
+        GEsum0 = GEsum; // this only used in a debug statement later
 
+        // Vm is potential in millivolts?  V in MacGregor is Potential
+        // Copy Potential(mv) 
+        // V in Mac. is Potential
         Vm = c->Vm_prev = c->Vm;
+
+        // copy Potassium Conductance for cell
         Gk = c->Gk;
         if (p->pop_subtype == PSR_POP)  /* PSR or other external object */
         {
+           // if Potential < Prob then DC = Decay Constant For Threshold
+           // else DC = Decay Constant for Potassium Action
           double DC = Vm < Prob ? p->DCTH : p->DCG;
-          if (S.stepnum == 0)
+          if (S.stepnum == 0) // special case, 1st time in loop
             Vm = 0;
+          // Potential = Potential - Prob * Decay Constant + Prob
           Vm = (Vm - Prob) * DC + Prob;
-             // spike is 1 (fired) or 0 (not)
+          // Thr is Resting Threshold + random gaussian number * optional std dev
+          // if Potential > Thr then if random # <= Potential  - threshold
+          // spike is 1 (fired) else 0 (not)
           c->spike = (Vm > c->Thr) ? (ran (&S.seed) <= (Vm - c->Thr)) : 0;
         }
         else 
         {
-          if (p->pop_subtype == BURSTER_POP)     /* hybrid IF cell */
+             /* hybrid Integrate and Fire (IF) cell (Breen, et. al. model) */
+          if (p->pop_subtype == BURSTER_POP)   
           {
             double G_NaP;
+            // m_inf=1/(1 + exp ((Potential - c_thresh_active_iak) / c_max_conductance_ika))
             double m_inf = 1 / (1 + exp ((Vm - p->theta_m) / p->sigma_m));
+
+            // h_inf=1/(1+exp((Potential - rebound_time_k) / max_conductance_ika))
             double h_inf = 1 / (1 + exp ((Vm - p->theta_h) / p->sigma_h));
+
+            // tau_h= accomodation / cosh((Potential-rebound_time_k) / (2 * max_conductance_ika)
             double tau_h = p->taubar_h / cosh ((Vm - p->theta_h) / (2 * p->sigma_h));
-            if (S.stepnum == 0) 
-               Gk = /*.28*/ .43, Vm = -52;
+            if (S.stepnum == 0)  // special case, 1st time
+            {
+               Gk = .43;  // initial Potassium Conductance
+               Vm = -52;  // initial millivolts
+            }
+            // Potassium Conductance = h_inf + (Potassium Conductance) * exp(-S.step/tau_h)
             Gk = h_inf + (Gk - h_inf) * exp (-S.step / tau_h);
+
+            // G_NaP = Persisten Sodium Current(?) * m_inf * Potassium conductance.
             G_NaP = p->g_NaP_h * m_inf * Gk;
+             // more complicated stuff
             Gsum += G_NaP + g_L;
             GEsum += G_NaP * E_Na + g_L * E_L + get_GE0 (p);
           }
           else 
           {
+            // if (spike) Potassium Conductance = Sensitivity to Potassium Conductance
+            //            + (Potassium Conductance - Sensitivity to Potassium Conductance)
+            // else       Potassium Conductance = Potassium Conductance 
+            //                                  * Decay Constant for Potassium Action
             Gk = c->spike ? p->B + (Gk - p->B) * p->DCG : Gk * p->DCG;
+
+            // Normalized Conductance sum +=  Potassium Conductance + Gm0
+            // (I can't find any place in the code where Gm0 is anything but 1.)
             Gsum += Gk + S.Gm0;
+
+            // Something to do with Excitatory Conductance derived from an
+            // injected expression based on a formula or an evaluated equation.
+            // Formula is: if Decay Constant for Potassium == -1
+            //                GE0 = DC Injected Current * 0 
+            //             else
+            //                GE0 = DC Injected Current *  Gm0 * Vm0;
+            //             GM0 seems to always be 1, Vm0 seems to always be 0
             double GE0 = get_GE0 (p);
 
             if(Debug)
@@ -920,10 +1024,17 @@ void simloop ()
                 last_volume = state.volume;
               }
             }
-
+            // Excitatory Conductance sum += Excitatory Conductance from injected current
+            //                  * Potassium Conductance * Potassium Equilibrium Potential
             GEsum += GE0 + Gk * S.Ek;
           }
 
+          // R0 is 0 for PSR, otherwise,
+          // R0 = -.5 * step size in ms / membrane time constant  * Gm0(always 1?)
+          // Potential = Excitatory Conductance sum / Normalized Conductance sum
+          //             + (Potential - Excitatory Conducance sum/Normalized Conductance sum
+          //             * exp(Normalized Conductance sim * R0
+          //
           Vm = GEsum/Gsum + (Vm - GEsum/Gsum) * exp(Gsum * p->R0);
 
          if (0) // debug stuff, 0 -> 1 to turn it on
@@ -943,18 +1054,25 @@ void simloop ()
          }
        
          if (p->pop_subtype == BURSTER_POP)
+            // Thr = Threshold Voltage
            c->Thr = p->Vthresh;
          else 
          {
+            // Potential time(?) = Resting Threshold + Accomodation Paramter 
+            //                     * (Potential - Vm0(always 0?))
            double Vt = p->Th0 + p->MGC * (Vm - S.Vm0);
+
+           // Thr starts as Resting Threshold + random gaussian number * optional std dev
+           // Thr = Vt + (Thr - Vt) * Decay Constant for Threshold
            c->Thr = Vt + (c->Thr - Vt) * p->DCTH;
          }
+         // spike is 1 if Potential >= Threshold
+         //          0 if not
          c->spike = Vm >= c->Thr;
        }
 
        if (c->spike)  // fired?
        {
-// printf("FIRE\n");
          int widx;
          if (write_bdt)
          {
@@ -999,38 +1117,125 @@ void simloop ()
          }
          if (pn + 1 == S.nanlgpop) 
            nf++;
+int saveD = Debug;
+Debug =1;
+           // Increase strength value in current slot in the q array
          for (tidx = 0; tidx < c->target_count; tidx++) 
          {
+//           if (Debug) {printf("Cell Fire\n");}
            Target *target = c->target + tidx;
            Syn *syn = target->syn;
            if (target->disabled)
              continue;
            int type_of_syn=S.net.syntype[syn->stidx].SYN_TYPE;
-           if (!S.ispresynaptic || type_of_syn == SYN_NORM) 
-             syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength;
-           else if (target->strength < 1)
-             syn->q[(S.stepnum + target->delay) % syn->q_count] *= target->strength;
-           else
-             syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength - 1.;
+           switch (type_of_syn)
+           {
+              case SYN_NORM:
+                 syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength;
+                 break;
+              case SYN_LEARN: 
+                 syn->q[(S.stepnum + target->delay) % syn->q_count] += target->syn->lrn_strength;
+//                 {if(Debug)printf("update target %d slot: %d\n",target->syn->cidx,(S.stepnum + target->delay) % syn->q_count);}
+                 updateLrnSyns(target,syn,cn);
+                 break;
+               case SYN_PRE:
+               case SYN_POST: // == 1 has no effect
+                  if (target->strength < 1)
+                     syn->q[(S.stepnum + target->delay) % syn->q_count] *= target->strength;
+                   else  if (target->strength > 1)
+                      syn->q[(S.stepnum + target->delay) % syn->q_count] += target->syn->lrn_strength;
+                   break;
+               default:
+                  printf("Unknown synapse type %d\n",type_of_syn);
+                  break;
+           }
+
+//           if(Debug){ printf("Cell %d %d %.2lf\n",target->delay, (S.stepnum + target->delay) % syn->q_count, syn->q[(S.stepnum + target->delay) % syn->q_count]);}
          }
+         // we fired. If we we have any learning
+         // input synapses, reward them.
+         LEARN *lrn_ptr;
+         double delta;
+         Syn* lsyn = c->syn;
+         int lsyn_num, lrn_num;
+         for (lsyn_num = 0; lsyn_num < c->syn_count; ++lsyn_num, ++lsyn)
+         {
+            if (lsyn->syntype != SYN_LEARN)
+               continue;
+            lrn_ptr = lsyn->lrn;
+            bool have_history = false;
+            {if(Debug)printf("Using learn synapse for pop: %d cell: %d\n",pn,cn);}
+            for (lrn_num = 0; lrn_num < lsyn->lrn_size; ++lrn_num,++lrn_ptr)
+            {
+               if (lrn_ptr->recv_pop == LRN_FREE)
+                  continue;
+               if (lrn_ptr->ariv_time > lsyn->lrnWindow)
+               {
+                  have_history = true; // may not use it, but pending
+                  continue;            // so don't forget below
+               }
+               have_history = true;
+//               {if(Debug)printf("tick: %d pop: %d cell:%d rcv: %d %lf ->" ,S.stepnum, pn, cn, lrn_ptr->recv_term,lsyn->lrn_strength);}
+               // Hebbian learning equation from MacGregor
+               delta = lsyn->lrnStrDelta * (fabs(lsyn->lrnStrMax - lsyn->lrn_strength));
+               lsyn->lrn_strength += delta;
+               // can overflow if initial > max 
+               // or underflow because it does if neg delta
+               if (lsyn->lrnStrDelta > 0)
+               {
+                  if (lsyn->lrn_strength > lsyn->lrnStrMax)
+                     lsyn->lrn_strength = lsyn->lrnStrMax;
+               }
+               else if (lsyn->lrnStrDelta < 0)
+               {
+                  if (lsyn->lrn_strength < lsyn->lrnStrMax)
+                     lsyn->lrn_strength = lsyn->lrnStrMax;
+               }
+
+               {if(Debug)printf("tick: %d cell fire USE HISTORY: pop: %d cell %d syn: %d new str: %lf\n" ,S.stepnum,pn, cn,lsyn_num,lsyn->lrn_strength);
+               fflush(stdout);}
+            }
+
+            // if cell fired but no pending input events, unlearn
+            if (!have_history)
+            {
+               delta = lsyn->lrnStrDelta * (fabs(lsyn->lrnStrMax - lsyn->lrn_strength));
+               lsyn->lrn_strength -= delta;
+               if (lsyn->lrnStrDelta >= 0)
+               {
+                  if (lsyn->lrn_strength < lsyn->initial_strength)
+                     lsyn->lrn_strength = lsyn->initial_strength;
+               }
+               else
+               {
+                  if (lsyn->lrn_strength > lsyn->initial_strength)
+                     lsyn->lrn_strength = lsyn->initial_strength;
+               }
+               {if(Debug)printf("tick: %d cell fire NO HISTORY pop: %d cell %d syn %d new str: %lf\n",S.stepnum,pn,cn,lsyn_num,lsyn->lrn_strength);}
+               fflush(stdout);
+            }
+         }
+
+Debug = saveD;
          if (p->pop_subtype == BURSTER_POP) 
          {
            Vm = ((11.085 * Gk) - 6.5825) * Gk + p->Vreset;
            Gk += p->delta_h - .5 * 0.0037 * Gk;
          }
        }
-       c->Vm = Vm;
+       c->Vm = Vm; // remember these for next time around the loop
        c->Gk = Gk;
       }
     }
-
-    for (pn = 0; pn < S.net.fiberpop_count; pn++)      // fibers
-    {
+//edit here to continue equation comments
+   for (pn = 0; pn < S.net.fiberpop_count; pn++)      // fibers
+   {
       FiberPop *p = S.net.fiberpop + pn;
       skipFib = false;
       doFibCalc = false;
       int fn;
       int widx;
+      signal = 0.0;
       if (S.stepnum >= p->start - 1 && S.stepnum < p->stop - 1)
       {
         if (p->pop_subtype == ELECTRIC_STIM)
@@ -1054,39 +1259,32 @@ void simloop ()
                    p->next_stim = p->next_fixed + next_targ;
                    break;
                 default:
-                   fprintf(stderr,"Unknown type of electric stim frequency\n");
+                   fprintf(stdout,"Unknown type of electric stim frequency\n");
                    break;
              }
            }
         }
         else if (p->pop_subtype == AFFERENT)
         {
-           double prob;
-           doFibCalc = true;
-           skipFib = false;
-           nextExternalVal(p,&prob);
-           printf("Got %lf\n",prob);
-           p->probability = interpolate(p,prob);
-           printf("Prob for %lf is %lf\n",prob,p->probability);
-
-           // here will go code to determine the current probablity for this pop/source
+           nextExternalVal(p,&signal);
+           if(Debug){printf("Got %lf\n",signal);}
+           p->probability = interpolate(p,signal);
+           if(Debug){printf("pn: %d  Prob for %lf is %lf\n",pn,signal,p->probability);}
         }
         else if (p->pop_subtype == 0)
-           fprintf(stderr,"Unknown fiber subtype\n");
+           fprintf(stdout,"Unknown fiber subtype\n");
 
         for (fn = 0; fn < p->fiber_count; fn++) 
         {
           int tidx;
           Fiber *f = p->fiber + fn;
-          float ranval;
           f->state = 0;
-// dale bp test, use prob from fake bp prob array
-//          if (doFibCalc || (!skipFib && (ranval = ran(&p->infsed)) <= curr_prob))
-// end daletest
-
-// real code
-          if (doFibCalc || (!skipFib && (ranval = ran(&p->infsed)) <= p->probability))
+          f->signal = signal; // same for all 
+          double ranval = ran(&p->infsed);
+          //  force estim evt  or  normal/aff, use prob
+          if (doFibCalc        || (!skipFib && ranval <= p->probability))
           {
+            if(Debug){printf("Fiber fire\n");}
             f->state = 1; // an event occurred
             doFibCalc = false;
             if (write_bdt)
@@ -1106,24 +1304,64 @@ void simloop ()
                   writeSpike(100+ S.cwrit_count + widx + 1, (int)((S.stepnum + 1) * S.step / dt_step));
                 }
             }
-            for (tidx = 0; tidx < f->target_count; tidx++)
+             // Targets means terminals. The starting origin for the q delay 
+             // arrays are randomly set during build_network.
+             // Fiber fired. Increase strength value in the q arrays at the
+             // current index determined by the index expression below.
+             // In effect, potentials are stored in a delay array.
+// ** Only the sender knows when it fires, so it has to add  
+// ** history to the receiver's history list.
+// ** Only the receiver knows when it fires, so it has to 
+// ** do the searching and rewarding. 
+// ** 
+// ** 
+
+            Target *target = f->target;
+            for (tidx = 0; tidx < f->target_count; tidx++, ++target)
             {
-              Target *target = f->target + tidx;
               Syn *syn = target->syn;
-               int type_of_syn = S.net.syntype[syn->stidx].SYN_TYPE;
-                  // if NORM, one calc, both pre and post get same calc, depending on sign
-               if (!S.ispresynaptic || type_of_syn == SYN_NORM) 
-                 syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength;
-               else if (target->strength < 1)
-                 syn->q[(S.stepnum + target->delay) % syn->q_count] *= target->strength;
-               else
-                 syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength - 1.;
-// printf("%d %lf\n",S.stepnum % syn->q_count,syn->q[S.stepnum % syn->q_count]);
-              }
+              int type_of_syn = S.net.syntype[syn->stidx].SYN_TYPE;
+                // if NORM, one calc, LEARN, also update history, 
+                // both pre and post get same calc, depending on sign
+               switch (type_of_syn)
+               {
+                  case SYN_NORM:
+                     syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength;
+                    break;
+                  case SYN_LEARN:
+                    syn->q[(S.stepnum + target->delay) % syn->q_count] += target->syn->lrn_strength;
+                    updateLrnSyns(target,syn,fn);
+                     break;
+                  case SYN_PRE:
+                  case SYN_POST: // == 1 has no effect
+                     if (target->strength < 1)
+                        syn->q[(S.stepnum + target->delay) % syn->q_count] *= target->strength;
+                      else  if (target->strength > 1)
+                         syn->q[(S.stepnum + target->delay) % syn->q_count] += target->strength - 1.;
+                      break;
+                  default:
+                      printf("Unknown synapse type %d\n",type_of_syn);
+                      break;
+                }
+               if(Debug){printf("  Fiber: cpop %d  cell %d  syntype %d delay: %d index: %d val: %.2lf\n", 
+                        syn->cpidx, syn->cidx, syn->stidx,
+                        target->delay,
+                        (S.stepnum + target->delay) % syn->q_count,
+                        syn->q[(S.stepnum + target->delay) % syn->q_count]);}
+             }
            }
          }
-       }
-    }
+      }
+      else
+      {
+         // If the last state was 1, it persists. Make sure it is zero.
+        for (fn = 0; fn < p->fiber_count; fn++) 
+        {
+          (p->fiber + fn)->state = 0;
+          (p->fiber + fn)->signal = 0;
+        }
+      }
+   }
 
     for (pn = 0; pn < S.net.cellpop_count; pn++) 
     {
@@ -1138,7 +1376,16 @@ void simloop ()
           for (sidx = 0; sidx < c->syn_count; sidx++) 
           {
             Syn *s = c->syn + sidx;
-// printf("%d %lf\n",S.stepnum % s->q_count,s->q[S.stepnum % s->q_count]);
+            if(Debug){
+               printf("step: %d ", S.stepnum);
+               if (s->q[S.stepnum % s->q_count])
+                  printf("Cell Using slot %d %.2lf\n", S.stepnum % s->q_count,
+                                                       s->q[S.stepnum % s->q_count]);
+               else
+                  printf(" Cell Delay slot %d\n", S.stepnum % s->q_count);
+            }
+
+             // this is where the q array values are used
             s->G = (double)s->G * s->DCS + s->q[S.stepnum % s->q_count];
             s->q[S.stepnum % s->q_count] = 0;
           }
@@ -1147,15 +1394,15 @@ void simloop ()
         {
           int pp_idx;
 
-            // Walk through the syn list. For normal type, if using pre/post synaptic
-            // modifiers, look for any that belong to current normal syn
+            // Walk through the syn list. For normal type, if using pre/post
+            // synaptic modifiers, look for any that belong to current normal syn
           for (sidx = 0; sidx < c->syn_count; ++sidx) 
           {
             Syn *norm, *pre = 0, *post = 0;
             float *norm_q;
             int stidx = c->syn[sidx].stidx;
             int type_of_syn=S.net.syntype[stidx].SYN_TYPE;
-            if (type_of_syn != SYN_NORM) // skip any pre/post
+            if (type_of_syn == SYN_PRE || type_of_syn == SYN_POST)
               continue;
             norm = c->syn + sidx;
             norm_q = norm->q + S.stepnum % norm->q_count;
@@ -1205,7 +1452,17 @@ void simloop ()
 
     if (S.outsned == 'e')   // save waveforms?
     {
-       int n, i, spike_count;
+       int n, i, spike_count, mult;
+       static struct {int spkcntcnt; int sum; int *spkcntlst;} *pop_plot;
+       static int pop_plot_size;
+         // pop summaries (if we have any) will need this. indexed by n, so
+         // some not used.
+       if (pop_plot_size < S.plot_count) {
+          TREALLOC (pop_plot, S.plot_count);
+          memset (pop_plot + pop_plot_size, 0, (S.plot_count - pop_plot_size) * sizeof *pop_plot);
+          pop_plot_size = S.plot_count;
+       }
+
        for (n = 0; n < S.plot_count; n++) 
        {
          int p = S.plot[n].pop - 1;
@@ -1218,21 +1475,34 @@ void simloop ()
          switch (S.plot[n].var) 
          {
            case 1:
-             S.plot[n].val    = S.net.cellpop[p].cell[c].Vm_prev;
-             if (S.net.cellpop[p].pop_subtype == BURSTER_POP)   /* hybrid IF population */
-               S.plot[n].val += 50;
-             S.plot[n].spike = S.net.cellpop[p].cell[c].spike;
+             if (c < S.net.cellpop[p].cell_count)
+             {
+                S.plot[n].val    = S.net.cellpop[p].cell[c].Vm_prev;
+                if (S.net.cellpop[p].pop_subtype == BURSTER_POP)   /* hybrid IF population */
+                  S.plot[n].val += 50;
+                S.plot[n].spike = S.net.cellpop[p].cell[c].spike;
+             }
+             else
+                S.plot[n].val =  S.plot[n].spike = 0;
              break;
            case 2:
-             if (S.net.cellpop[p].pop_subtype == BURSTER_POP)
-               S.plot[n].val    = S.net.cellpop[p].cell[c].Gk * 60;
-             else
-               S.plot[n].val    = -20 + S.net.cellpop[p].cell[c].Gk * 10;
+             if (c < S.net.cellpop[p].cell_count)
+             {
+                if (S.net.cellpop[p].pop_subtype == BURSTER_POP)
+                  S.plot[n].val    = S.net.cellpop[p].cell[c].Gk * 60;
+                else
+                  S.plot[n].val    = -20 + S.net.cellpop[p].cell[c].Gk * 10;
+             }
              break;
            case 3:
-             S.plot[n].val    = S.net.cellpop[p].cell[c].Thr;
-             if (S.net.cellpop[p].pop_subtype == BURSTER_POP)
-               S.plot[n].val += 50;
+             if (c < S.net.cellpop[p].cell_count)
+             {
+                S.plot[n].val    = S.net.cellpop[p].cell[c].Thr;
+                if (S.net.cellpop[p].pop_subtype == BURSTER_POP)
+                  S.plot[n].val += 50;
+             }
+             else
+                S.plot[n].val =  S.plot[n].spike = 0;
              break;
            case -1:
              S.plot[n].val    = (state.volume - (p + 1) / 10000.) / ((c + 1) / 10000.);
@@ -1282,48 +1552,88 @@ void simloop ()
            case -16:
              S.plot[n].val    = (limit (state.lma, -1, 1) - (p + 1) / 10000.) / ((c + 1) / 10000.);
              break;
-           case -17:
-             // S.plot[n].val    = S.net.fiberpop[p].fiber[c].state;
-             S.plot[n].val    = 0;
-             S.plot[n].spike  = S.net.fiberpop[p].fiber[c].state;
+           case STD_FIBER:
+           case AFFERENT_EVENT:
+             S.plot[n].val   = 0;
+             if (c < S.net.fiberpop[p].fiber_count)
+                S.plot[n].spike = S.net.fiberpop[p].fiber[c].state;
+             else
+                S.plot[n].spike = 0;
+             break;
+           case AFFERENT_SIGNAL:
+             if (c < S.net.fiberpop[p].fiber_count)
+                S.plot[n].val   = S.net.fiberpop[p].fiber[c].signal + S.net.fiberpop[p].offset;
+             else
+                S.plot[n].val = 0;
+             S.plot[n].spike = 0;
+             break;
+           case AFFERENT_BOTH: 
+             if (c < S.net.cellpop[p].cell_count)
+             {
+                S.plot[n].val   = S.net.fiberpop[p].fiber[c].signal + S.net.fiberpop[p].offset;
+                S.plot[n].spike = S.net.fiberpop[p].fiber[c].state;
+             }
+             else
+                S.plot[n].val = S.plot[n].spike = 0;
+             break;
+
+           case AFFERENT_INST: 
+           case AFFERENT_BIN: 
+             {
+               double binwidth_in_ms;
+               int spkcntcnt;
+               mult = (c & 0xffff) + 1;
+               binwidth_in_ms = c >> 16;
+               spkcntcnt = S.plot[n].var == AFFERENT_INST ? 1 : floor (binwidth_in_ms / S.step + .5);
+               int sclidx = S.stepnum % spkcntcnt;
+               double spikes_per_second_per_fiber;
+               if (pop_plot[n].spkcntcnt != spkcntcnt) {
+                 free (pop_plot[n].spkcntlst);
+                 TCALLOC (pop_plot[n].spkcntlst, spkcntcnt);
+                 pop_plot[n].spkcntcnt = spkcntcnt;
+               }
+               spike_count = 0;
+               for (i = 0; i < S.net.fiberpop[p].fiber_count; i++)
+                 spike_count += S.net.fiberpop[p].fiber[i].state;
+               pop_plot[n].sum += spike_count - pop_plot[n].spkcntlst[sclidx];
+               pop_plot[n].spkcntlst[sclidx] = spike_count;
+               spikes_per_second_per_fiber = (pop_plot[n].sum / (spkcntcnt * S.step / 1000.0)
+                         / (S.net.fiberpop[p].fiber_count ? S.net.fiberpop[p].fiber_count : 1));
+               S.plot[n].val = (double) spikes_per_second_per_fiber / mult;
+             }
              break;
 
            default:
-             if (S.plot[n].var < -17) // how does this case happen, just insurance?
+             if (S.plot[n].var < LAST_FIBER) // just in case
+             {
+               printf("There is a plot type simrun do not know.\n");
                break;
-             //if (S.plot[n].var >= 4)
-             {  // this is case 4 or greater, If 4, inst. pop activity.
-                // if > 4, var is is binwidth in ms. can't have a case 4 or greater. . .
-               static struct {int spkcntcnt; int sum; int *spkcntlst;} *cdat;
-               static int cdat_size;
+             }
+             {  // this is greater than 4, 
+                // if > 4, var-4 is is binwidth in ms. can't have a single 
+                // case of 4 or greater, so this is the last test
                int mult = c + 1;
-               double binwidth_in_ms = S.plot[n].var;
+               double binwidth_in_ms = S.plot[n].var-4;
+                // how many slots in array?
                int spkcntcnt = S.plot[n].var == 4 ? 1 : floor (binwidth_in_ms / S.step + .5);
                int sclidx = S.stepnum % spkcntcnt;
                double spikes_per_second_per_cell;
-               if (cdat_size < S.net.cellpop_count) {
-                 TREALLOC (cdat, S.net.cellpop_count);
-                 memset (cdat + cdat_size, 0, (S.net.cellpop_count - cdat_size) * sizeof *cdat);
-                 cdat_size = S.net.cellpop_count;
-               }
-               if (cdat[p].spkcntcnt != spkcntcnt) {
-                 free (cdat[p].spkcntlst);
-                 TCALLOC (cdat[p].spkcntlst, spkcntcnt);
-                 cdat[p].spkcntcnt = spkcntcnt;
+               if (pop_plot[n].spkcntcnt != spkcntcnt) {
+                 free (pop_plot[n].spkcntlst);
+                 TCALLOC (pop_plot[n].spkcntlst, spkcntcnt);
+                 pop_plot[n].spkcntcnt = spkcntcnt;
                }
                spike_count = 0;
                for (i = 0; i < S.net.cellpop[p].cell_count; i++)
                  spike_count += S.net.cellpop[p].cell[i].spike;
-               cdat[p].sum += spike_count - cdat[p].spkcntlst[sclidx];
-               cdat[p].spkcntlst[sclidx] = spike_count;
-               spikes_per_second_per_cell = (cdat[p].sum / (spkcntcnt * S.step / 1000.0)
+               pop_plot[n].sum += spike_count - pop_plot[n].spkcntlst[sclidx];
+               pop_plot[n].spkcntlst[sclidx] = spike_count;
+               spikes_per_second_per_cell = (pop_plot[n].sum / (spkcntcnt * S.step / 1000.0)
                          / (S.net.cellpop[p].cell_count ? S.net.cellpop[p].cell_count : 1));
-               S.plot[n].val = spikes_per_second_per_cell / mult;
+               S.plot[n].val = (double) spikes_per_second_per_cell / mult;
              }
-             //else
-             //   printf("Unhandled default plot type in simloop\n");
              break;
-           }
+          }
        }
        simoutsned ();
      }
@@ -1356,14 +1666,22 @@ void simloop ()
          nanlgcnt = 0;
        }
      }
+
+     decayLearnCells();
+     decayLearnFibers();
      chk_for_cmd();
      state = next_state;
+// **
+// ** End of the tick. This is where all of the existing learning
+// ** history tick values are decremented.
+// **
+
   } // END OF MAIN LOOP
 
   snprintf(msg,sizeof(msg)-1,"TIME\n%.2f\n", S.stepnum/ticks_in_sec);
   if (have_cmd_socket())
     send(sock_fd,&msg,strlen(msg),0); // progress rpt for simbuild 
-  fprintf(stderr,"simloop exited\n");
+  fprintf(stdout,"simloop exited\n");
   fflush(stdout);
 
   if (write_bdt)
@@ -1387,13 +1705,13 @@ void simloop ()
         if (asprintf (&cmd, "simpower_spectrum.sh %d %d bdt&", S.spawn_number, S.nanlgrate) == -1)
         exit (1);
      }
-     fprintf(stderr,"%s\n", cmd);
+     fprintf(stdout,"%s\n", cmd);
      if (system (cmd)){} 
         free(cmd);
   }
 #endif
-  fprintf(stderr,"simloop function returning\n");
-  fflush(stderr);
+  fprintf(stdout,"simloop function returning\n");
+  fflush(stdout);
 }
 
 

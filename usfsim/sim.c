@@ -91,7 +91,7 @@ char host_name[128] = "localhost";
 char outFname[2048];
 char inPath[2048];
 char outPath[2048];
-
+bool haveAff = false;
 int condi_flag = 0;
 
 #ifdef __linux__
@@ -180,8 +180,8 @@ int sigterm;
 
 static void sigterm_handler (int signum)
 {
-  fprintf(stderr,"sim got term signal\n");
-  fflush(stderr);
+  fprintf(stdout,"sim got term signal\n");
+  fflush(stdout);
   sigterm = 1;
 }
 
@@ -196,8 +196,8 @@ void setupViewer()
   int lookup;
 
   sprintf(port_str,"%d",viewerPortNum);
-  fprintf(stderr,"SIMRUN: Got viewer host: %s, port: %s\n",host_name, port_str);
-  fflush(stderr);
+  fprintf(stdout,"SIMRUN: Got viewer host: %s, port: %s\n",host_name, port_str);
+  fflush(stdout);
 
   memset(&hints,0,sizeof(hints));
   hints.ai_family = AF_INET;
@@ -206,7 +206,7 @@ void setupViewer()
   lookup = getaddrinfo(host_name, port_str, &hints, &server);
   if (lookup != 0)
   {
-     fprintf(stderr,"SIMRUN: ERROR, can't find viewer host %s  %s.\n",host_name,gai_strerror(lookup));
+     fprintf(stdout,"SIMRUN: ERROR, can't find viewer host %s  %s.\n",host_name,gai_strerror(lookup));
      freeaddrinfo(server);
      return;
   }
@@ -219,14 +219,14 @@ void setupViewer()
         perror("socket");
         continue;
      }
-     fprintf(stderr,"SIMRUN: Got socket %d\n",sock_fdout);
-     fflush(stderr);
+     fprintf(stdout,"SIMRUN: Got socket %d\n",sock_fdout);
+     fflush(stdout);
      break;
    }
    if (sock_fdout < 0)
    {
 #ifdef __linux__
-      fprintf(stderr,"Could not open simviewer socket, error is %d\n",errno);
+      fprintf(stdout,"Could not open simviewer socket, error is %d\n",errno);
 #else
       char *msg, *cmd;
       asprintf (&msg,
@@ -245,9 +245,9 @@ void setupViewer()
       {
         usleep(500000);
         --conn_try;
-        fprintf(stderr,"SIMRUN: No connection with simviewer, try again later\n");
-        fprintf(stderr,"errno: %d\n",errno);
-        fflush(stderr);
+        fprintf(stdout,"SIMRUN: No connection with simviewer, try again later\n");
+        fprintf(stdout,"errno: %d\n",errno);
+        fflush(stdout);
       }
       else
          break;
@@ -255,16 +255,16 @@ void setupViewer()
 
    if (conn_try)
    {
-     fprintf(stderr,"SIMRUN: Connected to simviewer.\n");
+     fprintf(stdout,"SIMRUN: Connected to simviewer.\n");
      serv_addr = (struct sockaddr_in *)ptr->ai_addr;
-     fprintf(stderr,"SIMRUN: Local simviewer connect port is %d\n",serv_addr->sin_port);
-     fflush(stderr);
+     fprintf(stdout,"SIMRUN: Local simviewer connect port is %d\n",serv_addr->sin_port);
+     fflush(stdout);
    }
    else
    {
 #if __linux__
-     fprintf(stderr,"Could not connect to simviewer, error is %d\n",errno);
-     fflush(stderr);
+     fprintf(stdout,"Could not connect to simviewer, error is %d\n",errno);
+     fflush(stdout);
 #else
      char *msg, *cmd;
      asprintf (&msg,
@@ -352,28 +352,28 @@ bool get_essentials(bool get_socket, bool get_script, bool get_sim, bool get_snd
         }
         else if (curr_id == SCRIPT_MSG)
         {
-          fprintf(stderr,"Got script, %ld bytes\n",curr_size);
+          fprintf(stdout,"Got script, %ld bytes\n",curr_size);
           have_script = true;
           script_ptr = buff;
           script_size = curr_size;
         }
         else if (curr_id == SIM_MSG)
         {
-          fprintf(stderr,"Got sim, %ld bytes\n",curr_size);
+          fprintf(stdout,"Got sim, %ld bytes\n",curr_size);
           have_sim = true;
           sim_ptr = buff;
           sim_size = curr_size;
         }
         else if (curr_id == SND_MSG)
         {
-          fprintf(stderr,"Got snd, %ld bytes\n",curr_size);
+          fprintf(stdout,"Got snd, %ld bytes\n",curr_size);
           have_snd = true;
           snd_ptr = buff;
           snd_size = curr_size;
         }
         else
         {
-          fprintf(stderr,"Unknown message %c from simbuild\n", curr_id);
+          fprintf(stdout,"Unknown message %c from simbuild\n", curr_id);
         }
         have_start = false;
         curr_id = 0;
@@ -405,8 +405,8 @@ bool get_essentials(bool get_socket, bool get_script, bool get_sim, bool get_snd
       --conn_try;
       if (conn_try == 0) // give up
       {
-        fprintf(stderr,"Waiting for msg timed out\n");
-        fflush (stderr);
+        fprintf(stdout,"Waiting for msg timed out\n");
+        fflush (stdout);
 #if defined WIN32
         if (use_socket && !have_socket)
         {
@@ -423,8 +423,8 @@ bool get_essentials(bool get_socket, bool get_script, bool get_sim, bool get_snd
       }
     }
   }
-  fprintf(stderr,"Got the essentials\n");
-  fflush(stderr);
+  fprintf(stdout,"Got the essentials\n");
+  fflush(stdout);
   return true;
 }
 
@@ -440,7 +440,7 @@ bool create_socket()
    int lookup;
 
    sprintf(port_str,"%d",simbuild_port);
-   fprintf(stderr,"SIMRUN: simbuild connection host: %s port: %s\n",host_name,port_str);
+   fprintf(stdout,"SIMRUN: simbuild connection host: %s port: %s\n",host_name,port_str);
 
 #if defined WIN32
    if (WSAStartup(MAKEWORD(2,2),&wsa) != 0)
@@ -462,7 +462,7 @@ bool create_socket()
    lookup = getaddrinfo(host_name, port_str ,&hints, &server);
    if (lookup != 0)
    {
-      fprintf(stderr,"SIMRUN: ERROR, can't find simbuild host %s  %s.\n",host_name,gai_strerror(lookup));
+      fprintf(stdout,"SIMRUN: ERROR, can't find simbuild host %s  %s.\n",host_name,gai_strerror(lookup));
       freeaddrinfo(server);
       return false;
    }
@@ -479,26 +479,26 @@ bool create_socket()
    }
    if (connect(sock_fd,ptr->ai_addr, ptr->ai_addrlen) < 0)
    {
-     fprintf(stderr,"SIMRUN: ERROR connecting to simbuild\n");
-     fprintf(stderr,"errno: %d\n",errno);
-     fflush(stderr);
+     fprintf(stdout,"SIMRUN: ERROR connecting to simbuild\n");
+     fprintf(stdout,"errno: %d\n",errno);
+     fflush(stdout);
      destroy_cmd_socket();
      freeaddrinfo(server);
      return false;
    }
    else
    {
-     fprintf(stderr,"SIMRUN: Connected to simbuild.\n");
+     fprintf(stdout,"SIMRUN: Connected to simbuild.\n");
      serv_addr = (struct sockaddr_in *)ptr->ai_addr;
-     fprintf(stderr,"SIMRUN: Connect port is %d\n",serv_addr->sin_port);
-     fflush(stderr);
+     fprintf(stdout,"SIMRUN: Connect port is %d\n",serv_addr->sin_port);
+     fflush(stdout);
      freeaddrinfo(server);
    }
 #if defined WIN32
    long nb= 1;
    ioctlsocket(sock_fd,FIONBIO,&nb);  // set to non-blocking reads
-   fprintf(stderr,"Connected to simbuild\n");
-   fflush(stderr);
+   fprintf(stdout,"Connected to simbuild\n");
+   fflush(stdout);
 #endif
    return true;
 }
@@ -764,6 +764,8 @@ static void non_interactive(FILE* script)
   ssize_t read;
   char response;
 
+  printf("Reading script\n");
+  fflush(stdout);
   read = getline (&ifile_name, &ifname_len, script);
   delete_newline (ifile_name, &read);
   if (strlen(inPath) > 0)
@@ -806,7 +808,7 @@ static void non_interactive(FILE* script)
       else if (scan_count != 3
                || (var > 0 && (pop > S.net.cellpop_count || pop < 1))
                || var == 0
-               || var < -16) {
+               || var < -23) {
          continue;
       }
       TREALLOC (S.plot, ++S.plot_count);
@@ -839,7 +841,7 @@ SPIKETIMES:
   sscanf (inbuf, "%c", &response);
   S.save_smr_wave = tolower (response);
 
-  if (S.save_spike_times == 'y' || S.save_smr == 'y') 
+  if (S.save_spike_times == 'y' || S.save_smr == 'y' || S.save_smr_wave == 'y') 
   {
     getline (&inbuf, &len, script);
     sscanf (inbuf, "%c", &response);
@@ -927,6 +929,7 @@ SPIKETIMES:
       channel++;
     }
   }
+  printf("Got script\n");
 }
 
 void usage(char* name)
@@ -968,11 +971,14 @@ int main (int argc, char **argv)
   int c;
   bool have_script=false;
   char scriptname[1024]={0};
-  char *membuf = 0;
   char *tmp_path;
   FILE *script;
 
-  fprintf(stderr,"SIMRUN version %s\n",VERSION);
+#if defined WIN32
+  freopen("siminfo.txt","w",stdout);
+#endif
+
+  fprintf(stdout,"SIMRUN version %s\n",VERSION);
   fflush(stdout);
 
   while (1)
@@ -987,7 +993,7 @@ int main (int argc, char **argv)
            if (optarg)
            {
               sscanf(optarg, "%hd",&simbuild_port);
-              fprintf(stderr,"SIMRUN: Got simbuild port: %d\n",simbuild_port);
+              fprintf(stdout,"SIMRUN: Got simbuild port: %d\n",simbuild_port);
            }
            break;
         case 's':
@@ -1014,7 +1020,7 @@ int main (int argc, char **argv)
            {
              memset((void*) &host_name,0,sizeof(host_name));
              strncpy(host_name,optarg,sizeof(host_name)-1);
-             fprintf(stderr,"SIMRUN: Got host name %s\n",host_name);
+             fprintf(stdout,"SIMRUN: Got host name %s\n",host_name);
            }
            break;
         case 'h':
@@ -1052,7 +1058,7 @@ int main (int argc, char **argv)
    // write wave files or send directly to simview?
   if (write_waves && use_socket) // only one of these can be set
   {
-     fprintf(stderr,"WARNING: Only one of --file or --socket can be used.\nSetting file as the default.");
+     fprintf(stdout,"WARNING: Only one of --file or --socket can be used.\nSetting file as the default.");
 #if defined WIN32
      char *msg, *cmd;
      asprintf(&msg,"WARNING: Only one of --file or --socket can be used\nSetting file as the default.");
@@ -1110,10 +1116,19 @@ int main (int argc, char **argv)
   }
   else if (have_script) // Direct connection or read from file? Socket over-rides script
   {
+    printf("Using script file\n");
+    fflush(stdout);
     script = fopen(scriptname,"r");
-    non_interactive(script);
-    fclose(script);
-    free(membuf);
+    if (script)
+    {
+       non_interactive(script);
+       fclose(script);
+    }
+    else
+    {
+       printf("Cannot open script file %s, exiting program. . .\n",scriptname);
+       exit(1);
+    }
   }
   else
      interactive();

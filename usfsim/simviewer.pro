@@ -55,6 +55,11 @@ linux {
    CONFIG += debug
 }
 
+wasm {
+  OBJECTS_DIR = webasm
+  MAKEFILE=Makefile_simviewer_web514.qt
+}
+
 win32 {
   QMAKE_CXXFLAGS += -O2 -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE
   QMAKE_CLAGS += -O2 -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE

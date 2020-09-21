@@ -245,6 +245,56 @@ int get_node(unsigned char local_type)
 }
 
 
+// If a node has been freed (i.e., deleted), search the other fibers and
+// cells to see if it was a target, and remove the target info and synapse
+// coordinates for that object.
+void adjustTargets(int node_id)
+{
+   int item, targ, num_targs;
+   C_NODE *cell;
+   F_NODE *fiber;
+
+   for (item=FIRST_INODE; item <= LAST_INODE; item++)
+   {
+      if (item == node_id)  // self already dealt with
+         continue;
+      switch (D.inode[item].node_type)
+      {
+         case CELL:
+            cell = &D.inode[item].unode.cell_node;
+            num_targs = cell->c_targets;
+            for (targ = 0; targ < num_targs; ++targ)
+            {
+               if (cell->c_target_nums[targ] == node_id)
+               {
+                  cell->c_target_nums[targ] = 0;
+                  memset(&cell->cell_axon[targ],0,sizeof(AXON));
+                  --cell->c_targets;
+               }
+            }
+            break;
+
+         case FIBER:
+            fiber = &D.inode[item].unode.fiber_node;
+            num_targs = fiber->f_targets;
+            for (targ = 0; targ < num_targs; ++targ)
+            {
+               if (fiber->f_target_nums[targ] == node_id)
+               {
+                  fiber->f_target_nums[targ] = 0;
+                  memset(&fiber->fiber_axon[targ],0,sizeof(AXON));
+                  --fiber->f_targets;
+               }
+            }
+            break;
+
+         default:
+            continue;
+            break;
+      }
+   }
+}
+
 
 /* Free/delete an existing node */
 void  free_node(int node_id)
@@ -265,8 +315,11 @@ void  free_node(int node_id)
 
    memset(&D.inode[node_id].unode,0,sizeof(D.inode[0].unode));
    D.inode[node_id].node_type = UNUSED;
+   D.inode[node_id].node_number = UNUSED;
    strcpy(D.inode[node_id].comment1,"This node is unused");
    ++D.num_free_nodes;
+
+   adjustTargets(node_id);
 
    /* set the globals to reflect the new pop quantities                       */
    get_maxes(&D);

@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1912</width>
-    <height>1126</height>
+    <width>1908</width>
+    <height>1002</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -35,7 +35,7 @@
   </property>
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -51,6 +51,9 @@
      <number>0</number>
     </property>
     <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <property name="spacing">
      <number>0</number>
     </property>
     <item row="0" column="0">
@@ -107,7 +110,7 @@
           <property name="frameShadow">
            <enum>QFrame::Raised</enum>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_4" stretch="2,3">
+          <layout class="QVBoxLayout" name="verticalLayout_4" stretch="3,4">
            <property name="spacing">
             <number>0</number>
            </property>
@@ -166,7 +169,7 @@
               <property name="geometry">
                <rect>
                 <x>288</x>
-                <y>10</y>
+                <y>2</y>
                 <width>130</width>
                 <height>41</height>
                </rect>
@@ -179,7 +182,7 @@
               <property name="geometry">
                <rect>
                 <x>144</x>
-                <y>10</y>
+                <y>2</y>
                 <width>130</width>
                 <height>41</height>
                </rect>
@@ -196,7 +199,7 @@ To Edit Connectors</string>
               <property name="geometry">
                <rect>
                 <x>3</x>
-                <y>9</y>
+                <y>1</y>
                 <width>130</width>
                 <height>41</height>
                </rect>
@@ -209,10 +212,16 @@ To Edit Connectors</string>
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>60</y>
+                <y>47</y>
                 <width>421</width>
-                <height>28</height>
+                <height>31</height>
                </rect>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
               </property>
               <property name="readOnly">
                <bool>true</bool>
@@ -229,6 +238,18 @@ To Edit Connectors</string>
               <enum>QFrame::Raised</enum>
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_4">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
               <item>
                <widget class="QPlainTextEdit" name="chatterBox">
                 <property name="undoRedoEnabled">
@@ -286,10 +307,16 @@ To Edit Connectors</string>
                <height>16777215</height>
               </size>
              </property>
+             <property name="tabPosition">
+              <enum>QTabWidget::North</enum>
+             </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>2</number>
              </property>
              <property name="documentMode">
+              <bool>false</bool>
+             </property>
+             <property name="tabBarAutoHide">
               <bool>false</bool>
              </property>
              <widget class="QWidget" name="cellPage">
@@ -340,7 +367,7 @@ To Edit Connectors</string>
                    <rect>
                     <x>10</x>
                     <y>10</y>
-                    <width>471</width>
+                    <width>871</width>
                     <height>151</height>
                    </rect>
                   </property>
@@ -528,14 +555,46 @@ Simview Table</string>
                     <string>Lumbar</string>
                    </property>
                   </widget>
+                  <widget class="QPushButton" name="cellUndo">
+                   <property name="enabled">
+                    <bool>false</bool>
+                   </property>
+                   <property name="geometry">
+                    <rect>
+                     <x>478</x>
+                     <y>0</y>
+                     <width>120</width>
+                     <height>40</height>
+                    </rect>
+                   </property>
+                   <property name="text">
+                    <string>Undo Changes</string>
+                   </property>
+                  </widget>
+                  <widget class="QPushButton" name="cellApply">
+                   <property name="enabled">
+                    <bool>false</bool>
+                   </property>
+                   <property name="geometry">
+                    <rect>
+                     <x>478</x>
+                     <y>46</y>
+                     <width>120</width>
+                     <height>40</height>
+                    </rect>
+                   </property>
+                   <property name="text">
+                    <string>Apply Changes</string>
+                   </property>
+                  </widget>
                  </widget>
                  <widget class="QFrame" name="cellMidFrame">
                   <property name="geometry">
                    <rect>
                     <x>10</x>
                     <y>164</y>
-                    <width>451</width>
-                    <height>341</height>
+                    <width>481</width>
+                    <height>301</height>
                    </rect>
                   </property>
                   <property name="sizePolicy">
@@ -562,11 +621,14 @@ Simview Table</string>
                      <x>20</x>
                      <y>10</y>
                      <width>451</width>
-                     <height>341</height>
+                     <height>281</height>
                     </rect>
                    </property>
                    <property name="styleSheet">
                     <string notr="true"/>
+                   </property>
+                   <property name="tabPosition">
+                    <enum>QTabWidget::East</enum>
                    </property>
                    <property name="currentIndex">
                     <number>0</number>
@@ -594,7 +656,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>27</y>
+                       <y>20</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -616,7 +678,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>221</x>
-                       <y>219</y>
+                       <y>190</y>
                        <width>181</width>
                        <height>16</height>
                       </rect>
@@ -629,7 +691,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>62</y>
+                       <y>48</y>
                        <width>201</width>
                        <height>16</height>
                       </rect>
@@ -642,7 +704,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>7</y>
+                       <y>0</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -655,7 +717,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>117</y>
+                       <y>96</y>
                        <width>221</width>
                        <height>16</height>
                       </rect>
@@ -668,7 +730,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>62</y>
+                       <y>48</y>
                        <width>151</width>
                        <height>16</height>
                       </rect>
@@ -681,7 +743,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>7</y>
+                       <y>0</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -694,7 +756,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>221</x>
-                       <y>241</y>
+                       <y>212</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -713,7 +775,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>167</y>
+                       <y>144</y>
                        <width>231</width>
                        <height>16</height>
                       </rect>
@@ -726,7 +788,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>27</y>
+                       <y>20</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -748,7 +810,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>187</y>
+                       <y>164</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -770,7 +832,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>82</y>
+                       <y>68</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -795,7 +857,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>82</y>
+                       <y>68</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -811,7 +873,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>137</y>
+                       <y>116</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -836,7 +898,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>117</y>
+                       <y>96</y>
                        <width>151</width>
                        <height>16</height>
                       </rect>
@@ -849,7 +911,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>137</y>
+                       <y>116</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -859,7 +921,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>239</y>
+                       <y>210</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -875,7 +937,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>219</y>
+                       <y>190</y>
                        <width>151</width>
                        <height>16</height>
                       </rect>
@@ -888,7 +950,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>187</y>
+                       <y>164</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -922,7 +984,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>167</y>
+                       <y>144</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -935,7 +997,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>0</x>
-                       <y>282</y>
+                       <y>255</y>
                        <width>360</width>
                        <height>20</height>
                       </rect>
@@ -945,7 +1007,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>263</y>
+                       <y>236</y>
                        <width>201</width>
                        <height>17</height>
                       </rect>
@@ -972,7 +1034,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>62</y>
+                       <y>49</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -998,7 +1060,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>137</y>
+                       <y>114</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1026,7 +1088,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>167</y>
+                       <y>141</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -1039,7 +1101,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>62</y>
+                       <y>49</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -1052,7 +1114,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>117</y>
+                       <y>94</y>
                        <width>201</width>
                        <height>16</height>
                       </rect>
@@ -1065,7 +1127,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>82</y>
+                       <y>69</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1093,7 +1155,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>238</y>
+                       <y>208</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1112,7 +1174,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>218</y>
+                       <y>188</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -1125,7 +1187,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>82</y>
+                       <y>69</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1159,7 +1221,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>218</y>
+                       <y>188</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -1197,7 +1259,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>187</y>
+                       <y>161</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1225,7 +1287,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>167</y>
+                       <y>141</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -1238,7 +1300,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>238</y>
+                       <y>208</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1266,7 +1328,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>187</y>
+                       <y>161</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1326,7 +1388,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>137</y>
+                       <y>114</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1357,7 +1419,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>117</y>
+                       <y>94</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -1370,7 +1432,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>280</y>
+                       <y>249</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1386,7 +1448,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>1</x>
-                       <y>261</y>
+                       <y>230</y>
                        <width>151</width>
                        <height>16</height>
                       </rect>
@@ -1399,7 +1461,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>220</x>
-                       <y>280</y>
+                       <y>249</y>
                        <width>170</width>
                        <height>20</height>
                       </rect>
@@ -1433,7 +1495,7 @@ Simview Table</string>
                      <property name="geometry">
                       <rect>
                        <x>218</x>
-                       <y>261</y>
+                       <y>230</y>
                        <width>160</width>
                        <height>16</height>
                       </rect>
@@ -1602,7 +1664,7 @@ Simview Table</string>
                   <property name="geometry">
                    <rect>
                     <x>10</x>
-                    <y>513</y>
+                    <y>452</y>
                     <width>471</width>
                     <height>201</height>
                    </rect>
@@ -1645,43 +1707,11 @@ Simview Table</string>
                     <number>99</number>
                    </property>
                   </widget>
-                  <widget class="QPushButton" name="cellUndo">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="geometry">
-                    <rect>
-                     <x>60</x>
-                     <y>122</y>
-                     <width>120</width>
-                     <height>32</height>
-                    </rect>
-                   </property>
-                   <property name="text">
-                    <string>Undo Changes</string>
-                   </property>
-                  </widget>
-                  <widget class="QPushButton" name="cellApply">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="geometry">
-                    <rect>
-                     <x>220</x>
-                     <y>122</y>
-                     <width>120</width>
-                     <height>32</height>
-                    </rect>
-                   </property>
-                   <property name="text">
-                    <string>Apply Changes</string>
-                   </property>
-                  </widget>
                   <widget class="QLineEdit" name="cellGroup">
                    <property name="geometry">
                     <rect>
                      <x>109</x>
-                     <y>76</y>
+                     <y>68</y>
                      <width>321</width>
                      <height>20</height>
                     </rect>
@@ -1700,7 +1730,7 @@ Simview Table</string>
                    <property name="geometry">
                     <rect>
                      <x>114</x>
-                     <y>56</y>
+                     <y>48</y>
                      <width>59</width>
                      <height>15</height>
                     </rect>
@@ -1744,7 +1774,7 @@ Simview Table</string>
                    <property name="geometry">
                     <rect>
                      <x>5</x>
-                     <y>56</y>
+                     <y>48</y>
                      <width>91</width>
                      <height>16</height>
                     </rect>
@@ -1757,7 +1787,7 @@ Simview Table</string>
                    <property name="geometry">
                     <rect>
                      <x>0</x>
-                     <y>77</y>
+                     <y>69</y>
                      <width>91</width>
                      <height>20</height>
                     </rect>
@@ -1817,7 +1847,7 @@ Simview Table</string>
                  <property name="frameShadow">
                   <enum>QFrame::Raised</enum>
                  </property>
-                 <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1,5,4">
+                 <layout class="QVBoxLayout" name="verticalLayout_5" stretch="2,6,4">
                   <item>
                    <widget class="QFrame" name="fiberTopFrame">
                     <property name="frameShape">
@@ -1829,9 +1859,9 @@ Simview Table</string>
                     <widget class="QPushButton" name="fiberShowTarg">
                      <property name="geometry">
                       <rect>
-                       <x>210</x>
-                       <y>10</y>
-                       <width>141</width>
+                       <x>117</x>
+                       <y>0</y>
+                       <width>150</width>
                        <height>40</height>
                       </rect>
                      </property>
@@ -1845,9 +1875,9 @@ Simview Table</string>
                      </property>
                      <property name="geometry">
                       <rect>
-                       <x>370</x>
-                       <y>10</y>
-                       <width>160</width>
+                       <x>277</x>
+                       <y>0</y>
+                       <width>169</width>
                        <height>40</height>
                       </rect>
                      </property>
@@ -1879,13 +1909,79 @@ BDT Table</string>
                      <property name="geometry">
                       <rect>
                        <x>10</x>
-                       <y>27</y>
-                       <width>181</width>
-                       <height>21</height>
+                       <y>23</y>
+                       <width>121</width>
+                       <height>41</height>
                       </rect>
                      </property>
                      <property name="text">
-                      <string>Electric Stimulation</string>
+                      <string>Electric
+Stimulation</string>
+                     </property>
+                    </widget>
+                    <widget class="QPushButton" name="fiberSendLaunchPlot">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="geometry">
+                      <rect>
+                       <x>277</x>
+                       <y>50</y>
+                       <width>169</width>
+                       <height>40</height>
+                      </rect>
+                     </property>
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This adds a row to the SimLauncher SimViewer table in for a cell in this population. Information about one or more cells in this population will be plotted in the SimViewer window.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
+                     <property name="text">
+                      <string>Send to Launcher
+Simview Table</string>
+                     </property>
+                    </widget>
+                    <widget class="QPushButton" name="fiberUndo">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="geometry">
+                      <rect>
+                       <x>457</x>
+                       <y>0</y>
+                       <width>129</width>
+                       <height>40</height>
+                      </rect>
+                     </property>
+                     <property name="text">
+                      <string>Undo Changes</string>
+                     </property>
+                    </widget>
+                    <widget class="QPushButton" name="fiberApply">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="geometry">
+                      <rect>
+                       <x>457</x>
+                       <y>50</y>
+                       <width>129</width>
+                       <height>40</height>
+                      </rect>
+                     </property>
+                     <property name="text">
+                      <string>Apply Changes</string>
+                     </property>
+                    </widget>
+                    <widget class="QRadioButton" name="fiberAfferent">
+                     <property name="geometry">
+                      <rect>
+                       <x>10</x>
+                       <y>60</y>
+                       <width>161</width>
+                       <height>31</height>
+                      </rect>
+                     </property>
+                     <property name="text">
+                      <string>Afferent</string>
                      </property>
                     </widget>
                    </widget>
@@ -1902,13 +1998,16 @@ BDT Table</string>
                      <property name="geometry">
                       <rect>
                        <x>20</x>
-                       <y>20</y>
-                       <width>541</width>
+                       <y>10</y>
+                       <width>681</width>
                        <height>311</height>
                       </rect>
                      </property>
+                     <property name="tabPosition">
+                      <enum>QTabWidget::North</enum>
+                     </property>
                      <property name="currentIndex">
-                      <number>1</number>
+                      <number>2</number>
                      </property>
                      <property name="documentMode">
                       <bool>true</bool>
@@ -2092,7 +2191,7 @@ BDT Table</string>
                      </widget>
                      <widget class="QWidget" name="fiberElecTab">
                       <attribute name="title">
-                       <string>Electric Simulation</string>
+                       <string>Electric Stimulation</string>
                       </attribute>
                       <widget class="QLabel" name="fiberElectricFreqLabel">
                        <property name="geometry">
@@ -2305,6 +2404,337 @@ BDT Table</string>
                        </property>
                       </widget>
                      </widget>
+                     <widget class="QWidget" name="fiberAfferentTab">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>681</width>
+                        <height>500</height>
+                       </size>
+                      </property>
+                      <attribute name="title">
+                       <string>Afferent</string>
+                      </attribute>
+                      <widget class="QLineEdit" name="afferentFileName">
+                       <property name="geometry">
+                        <rect>
+                         <x>0</x>
+                         <y>22</y>
+                         <width>431</width>
+                         <height>25</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string/>
+                       </property>
+                       <property name="maxLength">
+                        <number>1023</number>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                      <widget class="QLabel" name="afferentFileLabel">
+                       <property name="geometry">
+                        <rect>
+                         <x>0</x>
+                         <y>0</y>
+                         <width>220</width>
+                         <height>17</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Afferent File</string>
+                       </property>
+                      </widget>
+                      <widget class="QPushButton" name="afferentFileButton">
+                       <property name="geometry">
+                        <rect>
+                         <x>449</x>
+                         <y>18</y>
+                         <width>128</width>
+                         <height>40</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Browse For File</string>
+                       </property>
+                      </widget>
+                      <widget class="QDoubleSpinBox" name="fiberAfferentStopFire">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>159</y>
+                         <width>140</width>
+                         <height>24</height>
+                        </rect>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use the down arrow to select a value less than zero to indicate firing continues until the end of the simulation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="specialValueText">
+                        <string>Never</string>
+                       </property>
+                       <property name="suffix">
+                        <string> seconds</string>
+                       </property>
+                       <property name="decimals">
+                        <number>3</number>
+                       </property>
+                       <property name="minimum">
+                        <double>-1.000000000000000</double>
+                       </property>
+                       <property name="maximum">
+                        <double>99999999999999.000000000000000</double>
+                       </property>
+                       <property name="value">
+                        <double>-1.000000000000000</double>
+                       </property>
+                      </widget>
+                      <widget class="QLabel" name="label_12">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>138</y>
+                         <width>121</width>
+                         <height>16</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Time to end firing</string>
+                       </property>
+                      </widget>
+                      <widget class="QDoubleSpinBox" name="fiberAfferentStartFire">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>113</y>
+                         <width>140</width>
+                         <height>24</height>
+                        </rect>
+                       </property>
+                       <property name="suffix">
+                        <string> seconds</string>
+                       </property>
+                       <property name="decimals">
+                        <number>3</number>
+                       </property>
+                       <property name="maximum">
+                        <double>99999999999.000000000000000</double>
+                       </property>
+                      </widget>
+                      <widget class="QSpinBox" name="fiberAfferentNumPop">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>208</y>
+                         <width>140</width>
+                         <height>24</height>
+                        </rect>
+                       </property>
+                       <property name="maximum">
+                        <number>10000</number>
+                       </property>
+                       <property name="displayIntegerBase">
+                        <number>10</number>
+                       </property>
+                      </widget>
+                      <widget class="QLabel" name="label_13">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>92</y>
+                         <width>151</width>
+                         <height>16</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Time to begin firing</string>
+                       </property>
+                      </widget>
+                      <widget class="QLabel" name="label_14">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>187</y>
+                         <width>151</width>
+                         <height>16</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Fibers in population</string>
+                       </property>
+                      </widget>
+                      <widget class="QTableView" name="afferentTable">
+                       <property name="geometry">
+                        <rect>
+                         <x>340</x>
+                         <y>80</y>
+                         <width>331</width>
+                         <height>141</height>
+                        </rect>
+                       </property>
+                       <property name="editTriggers">
+                        <set>QAbstractItemView::AnyKeyPressed</set>
+                       </property>
+                       <property name="showDropIndicator" stdset="0">
+                        <bool>false</bool>
+                       </property>
+                       <property name="dragEnabled">
+                        <bool>true</bool>
+                       </property>
+                       <property name="dragDropOverwriteMode">
+                        <bool>false</bool>
+                       </property>
+                       <property name="dragDropMode">
+                        <enum>QAbstractItemView::NoDragDrop</enum>
+                       </property>
+                       <property name="defaultDropAction">
+                        <enum>Qt::MoveAction</enum>
+                       </property>
+                       <property name="alternatingRowColors">
+                        <bool>true</bool>
+                       </property>
+                       <property name="selectionMode">
+                        <enum>QAbstractItemView::SingleSelection</enum>
+                       </property>
+                       <property name="sortingEnabled">
+                        <bool>false</bool>
+                       </property>
+                       <property name="cornerButtonEnabled">
+                        <bool>false</bool>
+                       </property>
+                       <attribute name="horizontalHeaderMinimumSectionSize">
+                        <number>120</number>
+                       </attribute>
+                       <attribute name="horizontalHeaderDefaultSectionSize">
+                        <number>140</number>
+                       </attribute>
+                       <attribute name="horizontalHeaderHighlightSections">
+                        <bool>false</bool>
+                       </attribute>
+                       <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+                        <bool>false</bool>
+                       </attribute>
+                       <attribute name="horizontalHeaderStretchLastSection">
+                        <bool>true</bool>
+                       </attribute>
+                       <attribute name="verticalHeaderCascadingSectionResizes">
+                        <bool>false</bool>
+                       </attribute>
+                      </widget>
+                      <widget class="QPushButton" name="delAfferentRow">
+                       <property name="geometry">
+                        <rect>
+                         <x>212</x>
+                         <y>140</y>
+                         <width>110</width>
+                         <height>40</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Delete Row</string>
+                       </property>
+                      </widget>
+                      <widget class="QPushButton" name="addAfferentRow">
+                       <property name="geometry">
+                        <rect>
+                         <x>210</x>
+                         <y>80</y>
+                         <width>110</width>
+                         <height>40</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Add Row</string>
+                       </property>
+                      </widget>
+                      <widget class="QLabel" name="aff_seed_label">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>47</y>
+                         <width>161</width>
+                         <height>16</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>Random Number Seed</string>
+                       </property>
+                      </widget>
+                      <widget class="QSpinBox" name="fiberAffSeed">
+                       <property name="geometry">
+                        <rect>
+                         <x>2</x>
+                         <y>67</y>
+                         <width>140</width>
+                         <height>24</height>
+                        </rect>
+                       </property>
+                       <property name="maximum">
+                        <number>2147483647</number>
+                       </property>
+                       <property name="value">
+                        <number>12345</number>
+                       </property>
+                      </widget>
+                      <widget class="QLabel" name="label_15">
+                       <property name="geometry">
+                        <rect>
+                         <x>176</x>
+                         <y>187</y>
+                         <width>151</width>
+                         <height>16</height>
+                        </rect>
+                       </property>
+                       <property name="text">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Signal Offset&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                      </widget>
+                      <widget class="QSpinBox" name="fiberAfferentOffset">
+                       <property name="geometry">
+                        <rect>
+                         <x>176</x>
+                         <y>208</y>
+                         <width>140</width>
+                         <height>24</height>
+                        </rect>
+                       </property>
+                       <property name="toolTip">
+                        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This is added or subtracted to the value of the signal. For example, if the smallest signal value was 80, setting this to -80 displays that value as zero. &lt;/p&gt;&lt;p&gt;This is useful for making maximum use of the simviewer plot rows in that the value of 80 will be seen as 0. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                       </property>
+                       <property name="minimum">
+                        <number>-10000000</number>
+                       </property>
+                       <property name="maximum">
+                        <number>10000000</number>
+                       </property>
+                       <property name="displayIntegerBase">
+                        <number>10</number>
+                       </property>
+                      </widget>
+                      <zorder>afferentFileName</zorder>
+                      <zorder>afferentFileLabel</zorder>
+                      <zorder>afferentFileButton</zorder>
+                      <zorder>fiberAfferentStopFire</zorder>
+                      <zorder>label_12</zorder>
+                      <zorder>fiberAfferentStartFire</zorder>
+                      <zorder>fiberAfferentNumPop</zorder>
+                      <zorder>label_13</zorder>
+                      <zorder>label_14</zorder>
+                      <zorder>delAfferentRow</zorder>
+                      <zorder>afferentTable</zorder>
+                      <zorder>addAfferentRow</zorder>
+                      <zorder>aff_seed_label</zorder>
+                      <zorder>fiberAffSeed</zorder>
+                      <zorder>label_15</zorder>
+                      <zorder>fiberAfferentOffset</zorder>
+                     </widget>
                     </widget>
                    </widget>
                   </item>
@@ -2316,45 +2746,13 @@ BDT Table</string>
                     <property name="frameShadow">
                      <enum>QFrame::Raised</enum>
                     </property>
-                    <widget class="QPushButton" name="fiberUndo">
-                     <property name="enabled">
-                      <bool>false</bool>
-                     </property>
-                     <property name="geometry">
-                      <rect>
-                       <x>60</x>
-                       <y>122</y>
-                       <width>120</width>
-                       <height>32</height>
-                      </rect>
-                     </property>
-                     <property name="text">
-                      <string>Undo Changes</string>
-                     </property>
-                    </widget>
-                    <widget class="QPushButton" name="fiberApply">
-                     <property name="enabled">
-                      <bool>false</bool>
-                     </property>
-                     <property name="geometry">
-                      <rect>
-                       <x>220</x>
-                       <y>122</y>
-                       <width>120</width>
-                       <height>32</height>
-                      </rect>
-                     </property>
-                     <property name="text">
-                      <string>Apply Changes</string>
-                     </property>
-                    </widget>
                     <widget class="QLineEdit" name="fibComment">
                      <property name="geometry">
                       <rect>
                        <x>0</x>
-                       <y>27</y>
+                       <y>42</y>
                        <width>430</width>
-                       <height>22</height>
+                       <height>20</height>
                       </rect>
                      </property>
                      <property name="maxLength">
@@ -2365,9 +2763,9 @@ BDT Table</string>
                      <property name="geometry">
                       <rect>
                        <x>5</x>
-                       <y>7</y>
+                       <y>22</y>
                        <width>221</width>
-                       <height>16</height>
+                       <height>14</height>
                       </rect>
                      </property>
                      <property name="text">
@@ -2378,9 +2776,9 @@ BDT Table</string>
                      <property name="geometry">
                       <rect>
                        <x>114</x>
-                       <y>56</y>
+                       <y>71</y>
                        <width>91</width>
-                       <height>16</height>
+                       <height>14</height>
                       </rect>
                      </property>
                      <property name="text">
@@ -2391,9 +2789,9 @@ BDT Table</string>
                      <property name="geometry">
                       <rect>
                        <x>109</x>
-                       <y>76</y>
+                       <y>91</y>
                        <width>321</width>
-                       <height>22</height>
+                       <height>20</height>
                       </rect>
                      </property>
                      <property name="maxLength">
@@ -2412,8 +2810,8 @@ BDT Table</string>
                      </property>
                      <property name="geometry">
                       <rect>
-                       <x>80</x>
-                       <y>160</y>
+                       <x>0</x>
+                       <y>110</y>
                        <width>231</width>
                        <height>25</height>
                       </rect>
@@ -2432,9 +2830,9 @@ BDT Table</string>
                      <property name="geometry">
                       <rect>
                        <x>5</x>
-                       <y>56</y>
+                       <y>71</y>
                        <width>91</width>
-                       <height>16</height>
+                       <height>14</height>
                       </rect>
                      </property>
                      <property name="text">
@@ -2445,9 +2843,9 @@ BDT Table</string>
                      <property name="geometry">
                       <rect>
                        <x>0</x>
-                       <y>77</y>
+                       <y>92</y>
                        <width>91</width>
-                       <height>20</height>
+                       <height>18</height>
                       </rect>
                      </property>
                      <property name="maxLength">
@@ -2507,7 +2905,7 @@ BDT Table</string>
                  <property name="frameShadow">
                   <enum>QFrame::Raised</enum>
                  </property>
-                 <layout class="QVBoxLayout" name="verticalLayout_6" stretch="4,8,2">
+                 <layout class="QVBoxLayout" name="verticalLayout_6" stretch="4,8">
                   <item>
                    <widget class="QFrame" name="frame">
                     <property name="frameShape">
@@ -2726,6 +3124,38 @@ BDT Table</string>
                       <string>Synapse Strength</string>
                      </property>
                     </widget>
+                    <widget class="QPushButton" name="synapseUndo">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="geometry">
+                      <rect>
+                       <x>508</x>
+                       <y>21</y>
+                       <width>120</width>
+                       <height>30</height>
+                      </rect>
+                     </property>
+                     <property name="text">
+                      <string>Undo Changes</string>
+                     </property>
+                    </widget>
+                    <widget class="QPushButton" name="synapseApply">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="geometry">
+                      <rect>
+                       <x>508</x>
+                       <y>61</y>
+                       <width>120</width>
+                       <height>30</height>
+                      </rect>
+                     </property>
+                     <property name="text">
+                      <string>Apply Changes</string>
+                     </property>
+                    </widget>
                    </widget>
                   </item>
                   <item>
@@ -2754,6 +3184,9 @@ BDT Table</string>
                      </property>
                      <item>
                       <widget class="synView" name="synapseList">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
                        <property name="editTriggers">
                         <set>QAbstractItemView::NoEditTriggers</set>
                        </property>
@@ -2762,6 +3195,9 @@ BDT Table</string>
                        </property>
                        <property name="dragDropOverwriteMode">
                         <bool>false</bool>
+                       </property>
+                       <property name="alternatingRowColors">
+                        <bool>true</bool>
                        </property>
                        <property name="selectionMode">
                         <enum>QAbstractItemView::SingleSelection</enum>
@@ -2775,51 +3211,12 @@ BDT Table</string>
                        <property name="allColumnsShowFocus">
                         <bool>false</bool>
                        </property>
+                       <attribute name="headerStretchLastSection">
+                        <bool>false</bool>
+                       </attribute>
                       </widget>
                      </item>
                     </layout>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QFrame" name="frame_2">
-                    <property name="frameShape">
-                     <enum>QFrame::StyledPanel</enum>
-                    </property>
-                    <property name="frameShadow">
-                     <enum>QFrame::Raised</enum>
-                    </property>
-                    <widget class="QPushButton" name="synapseApply">
-                     <property name="enabled">
-                      <bool>false</bool>
-                     </property>
-                     <property name="geometry">
-                      <rect>
-                       <x>200</x>
-                       <y>20</y>
-                       <width>120</width>
-                       <height>32</height>
-                      </rect>
-                     </property>
-                     <property name="text">
-                      <string>Apply Changes</string>
-                     </property>
-                    </widget>
-                    <widget class="QPushButton" name="synapseUndo">
-                     <property name="enabled">
-                      <bool>false</bool>
-                     </property>
-                     <property name="geometry">
-                      <rect>
-                       <x>40</x>
-                       <y>20</y>
-                       <width>120</width>
-                       <height>32</height>
-                      </rect>
-                     </property>
-                     <property name="text">
-                      <string>Undo Changes</string>
-                     </property>
-                    </widget>
                    </widget>
                   </item>
                  </layout>
@@ -2858,7 +3255,7 @@ BDT Table</string>
                  <property name="frameShadow">
                   <enum>QFrame::Raised</enum>
                  </property>
-                 <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,8,1">
+                 <layout class="QVBoxLayout" name="verticalLayout_3" stretch="2,8">
                   <item>
                    <widget class="QFrame" name="frame_12">
                     <property name="sizePolicy">
@@ -2887,100 +3284,121 @@ BDT Table</string>
                     </property>
                     <layout class="QHBoxLayout" name="horizontalLayout">
                      <item>
-                      <spacer name="horizontalSpacer">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeType">
-                        <enum>QSizePolicy::Preferred</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>5</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="buildAdd">
-                       <property name="enabled">
-                        <bool>true</bool>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>130</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>Add Synapse</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <spacer name="horizontalSpacer_2">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeType">
-                        <enum>QSizePolicy::Preferred</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="buildAddPre">
-                       <property name="enabled">
-                        <bool>true</bool>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>130</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>Add Presynaptic</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <spacer name="horizontalSpacer_3">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeType">
-                        <enum>QSizePolicy::Preferred</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="buildAddPost">
-                       <property name="enabled">
-                        <bool>true</bool>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>130</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>Add Postsynaptic</string>
-                       </property>
-                      </widget>
+                      <layout class="QGridLayout" name="gridLayout_2">
+                       <item row="1" column="0">
+                        <widget class="QPushButton" name="buildUndo">
+                         <property name="enabled">
+                          <bool>false</bool>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>120</width>
+                           <height>30</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Undo Changes</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QPushButton" name="buildAddPre">
+                         <property name="enabled">
+                          <bool>true</bool>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>130</width>
+                           <height>30</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Add Presynaptic</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QPushButton" name="buildApply">
+                         <property name="enabled">
+                          <bool>false</bool>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>120</width>
+                           <height>30</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Apply Changes</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="0">
+                        <widget class="QPushButton" name="buildAdd">
+                         <property name="enabled">
+                          <bool>true</bool>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>130</width>
+                           <height>30</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Add Synapse</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="2">
+                        <widget class="QPushButton" name="buildAddPost">
+                         <property name="enabled">
+                          <bool>true</bool>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>130</width>
+                           <height>30</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Add Postsynaptic</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="4">
+                        <layout class="QHBoxLayout" name="horizontalLayout_7">
+                         <item>
+                          <widget class="QPushButton" name="buildDel">
+                           <property name="enabled">
+                            <bool>true</bool>
+                           </property>
+                           <property name="minimumSize">
+                            <size>
+                             <width>130</width>
+                             <height>30</height>
+                            </size>
+                           </property>
+                           <property name="text">
+                            <string>Delete Row</string>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                       <item row="0" column="4">
+                        <widget class="QPushButton" name="buildAddLearn">
+                         <property name="minimumSize">
+                          <size>
+                           <width>130</width>
+                           <height>30</height>
+                          </size>
+                         </property>
+                         <property name="text">
+                          <string>Add Learn</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
                      </item>
                      <item>
                       <spacer name="horizontalSpacer_4">
@@ -2989,35 +3407,6 @@ BDT Table</string>
                        </property>
                        <property name="sizeType">
                         <enum>QSizePolicy::Preferred</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="buildDel">
-                       <property name="enabled">
-                        <bool>true</bool>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>130</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>Delete Row</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <spacer name="horizontalSpacer_5">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
                        </property>
                        <property name="sizeHint" stdset="0">
                         <size>
@@ -3047,6 +3436,9 @@ BDT Table</string>
                     <layout class="QVBoxLayout" name="verticalLayout_2">
                      <item>
                       <widget class="QTreeView" name="buildSynapsesView">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                          <horstretch>0</horstretch>
@@ -3065,6 +3457,9 @@ BDT Table</string>
                        <property name="editTriggers">
                         <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::CurrentChanged|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
                        </property>
+                       <property name="tabKeyNavigation">
+                        <bool>true</bool>
+                       </property>
                        <property name="dragEnabled">
                         <bool>false</bool>
                        </property>
@@ -3078,7 +3473,7 @@ BDT Table</string>
                         <enum>Qt::MoveAction</enum>
                        </property>
                        <property name="alternatingRowColors">
-                        <bool>false</bool>
+                        <bool>true</bool>
                        </property>
                        <property name="selectionMode">
                         <enum>QAbstractItemView::SingleSelection</enum>
@@ -3102,101 +3497,6 @@ BDT Table</string>
                         <bool>false</bool>
                        </attribute>
                       </widget>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QFrame" name="frame_14">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="frameShape">
-                     <enum>QFrame::NoFrame</enum>
-                    </property>
-                    <property name="frameShadow">
-                     <enum>QFrame::Raised</enum>
-                    </property>
-                    <layout class="QHBoxLayout" name="horizontalLayout_7">
-                     <item>
-                      <spacer name="horizontalSpacer_6">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeType">
-                        <enum>QSizePolicy::Preferred</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="buildUndo">
-                       <property name="enabled">
-                        <bool>false</bool>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>120</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>Undo Changes</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <spacer name="horizontalSpacer_8">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeType">
-                        <enum>QSizePolicy::Preferred</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="buildApply">
-                       <property name="enabled">
-                        <bool>false</bool>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>120</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>Apply Changes</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <spacer name="horizontalSpacer_7">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>40</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
                      </item>
                     </layout>
                    </widget>
@@ -3243,61 +3543,14 @@ BDT Table</string>
                   <x>30</x>
                   <y>10</y>
                   <width>756</width>
-                  <height>591</height>
+                  <height>431</height>
                  </rect>
                 </property>
-                <layout class="QGridLayout" name="globalGridLayout" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="0,0,0,0" rowminimumheight="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0">
-                 <item row="6" column="0" colspan="4">
-                  <widget class="QLabel" name="globPotEqPotLabel">
-                   <property name="text">
-                    <string>Potassium Equilibrium Potential</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="3">
-                  <widget class="QLineEdit" name="globStepTime">
-                   <property name="text">
-                    <string>0.5000</string>
-                   </property>
-                   <property name="maxLength">
-                    <number>20</number>
-                   </property>
-                   <property name="readOnly">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="8" column="0" colspan="4">
-                  <widget class="QLabel" name="globPhrenicRecruitLabel">
-                   <property name="text">
-                    <string>Phrenic recruitment equation for Lung Model</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="13" column="0" colspan="4">
-                  <widget class="QLineEdit" name="iLmElmFiringRate"/>
-                 </item>
-                 <item row="1" column="0" colspan="4">
-                  <widget class="QLineEdit" name="globComment"/>
-                 </item>
-                 <item row="10" column="0" colspan="4">
-                  <widget class="QLabel" name="globalLumbarRecruitLabel">
-                   <property name="text">
-                    <string>Lumbar Recruitment equation for Lung Model</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="0" colspan="4">
-                  <widget class="QLineEdit" name="globLength"/>
-                 </item>
-                 <item row="12" column="0" colspan="4">
-                  <widget class="QLabel" name="iLmElmRateLabel">
-                   <property name="text">
-                    <string>ILM and ELM Firing Rate for Maximum Activation for Lung Model</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="5" column="0">
+                <layout class="QGridLayout" name="globalGridLayout" rowstretch="2,1,1,1,1,1,1,1,1,1,1,1,1,1,1" columnstretch="0,0,0,0">
+                 <property name="verticalSpacing">
+                  <number>0</number>
+                 </property>
+                 <item row="6" column="0">
                   <widget class="QRadioButton" name="globalBdt">
                    <property name="maximumSize">
                     <size>
@@ -3316,40 +3569,53 @@ BDT Table</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="7" column="0" colspan="4">
-                  <widget class="QLineEdit" name="globKEqPot"/>
-                 </item>
-                 <item row="2" column="0" colspan="4">
-                  <widget class="QLabel" name="globLengthLabel">
+                 <item row="13" column="0" colspan="4">
+                  <widget class="QLabel" name="iLmElmRateLabel">
                    <property name="text">
-                    <string>Length of simulation in seconds</string>
+                    <string>ILM and ELM Firing Rate for Maximum Activation for Lung Model</string>
                    </property>
                   </widget>
-                 </item>
-                 <item row="5" column="2">
-                  <widget class="QRadioButton" name="globalOther">
-                   <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selecting this will create a bdt file that uses a custom step size that contains the simulator results. You can enable or disable saving the file in the Simulation Launcher window. Note that the time values in some of the tools that process bdt files will be incorrect.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="text">
-                    <string>Custom</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="0" colspan="4">
-                  <widget class="QLabel" name="globCommentLabel">
-                   <property name="text">
-                    <string>Global Comment</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="11" column="0" colspan="4">
-                  <widget class="QLineEdit" name="globLumbarRecruit"/>
                  </item>
                  <item row="9" column="0" colspan="4">
+                  <widget class="QLabel" name="globPhrenicRecruitLabel">
+                   <property name="text">
+                    <string>Phrenic recruitment equation for Lung Model</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0" colspan="4">
+                  <widget class="QLineEdit" name="globComment"/>
+                 </item>
+                 <item row="8" column="0" colspan="4">
+                  <widget class="QLineEdit" name="globKEqPot"/>
+                 </item>
+                 <item row="12" column="0" colspan="4">
+                  <widget class="QLineEdit" name="globLumbarRecruit"/>
+                 </item>
+                 <item row="5" column="0" colspan="4">
+                  <widget class="QLabel" name="globStepTimeLabel">
+                   <property name="text">
+                    <string>Simulation step size in milliseconds</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="10" column="0" colspan="4">
                   <widget class="QLineEdit" name="globPhrenicRecruit"/>
                  </item>
-                 <item row="5" column="1">
+                 <item row="6" column="3">
+                  <widget class="QLineEdit" name="globStepTime">
+                   <property name="text">
+                    <string>0.5000</string>
+                   </property>
+                   <property name="maxLength">
+                    <number>20</number>
+                   </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="1">
                   <widget class="QRadioButton" name="globalEdt">
                    <property name="maximumSize">
                     <size>
@@ -3365,17 +3631,54 @@ BDT Table</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="4" column="0" colspan="4">
-                  <widget class="QLabel" name="globStepTimeLabel">
+                 <item row="11" column="0" colspan="4">
+                  <widget class="QLabel" name="globalLumbarRecruitLabel">
                    <property name="text">
-                    <string>Simulation step size in milliseconds</string>
+                    <string>Lumbar Recruitment equation for Lung Model</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="16" column="0" colspan="4">
+                 <item row="3" column="0" colspan="4">
+                  <widget class="QLabel" name="globLengthLabel">
+                   <property name="text">
+                    <string>Length of simulation in seconds</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0" colspan="4">
+                  <widget class="QLineEdit" name="globLength"/>
+                 </item>
+                 <item row="7" column="0" colspan="4">
+                  <widget class="QLabel" name="globPotEqPotLabel">
+                   <property name="text">
+                    <string>Potassium Equilibrium Potential</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="14" column="0" colspan="4">
+                  <widget class="QLineEdit" name="iLmElmFiringRate"/>
+                 </item>
+                 <item row="6" column="2">
+                  <widget class="QRadioButton" name="globalOther">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selecting this will create a bdt file that uses a custom step size that contains the simulator results. You can enable or disable saving the file in the Simulation Launcher window. Note that the time values in some of the tools that process bdt files will be incorrect.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>Custom</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0" colspan="4">
+                  <widget class="QLabel" name="globCommentLabel">
+                   <property name="text">
+                    <string>Global Comment</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="0" colspan="4">
                   <widget class="QFrame" name="globButtonsFrame">
                    <property name="frameShape">
-                    <enum>QFrame::StyledPanel</enum>
+                    <enum>QFrame::NoFrame</enum>
                    </property>
                    <property name="frameShadow">
                     <enum>QFrame::Raised</enum>
@@ -3386,8 +3689,8 @@ BDT Table</string>
                     </property>
                     <property name="geometry">
                      <rect>
-                      <x>202</x>
-                      <y>5</y>
+                      <x>140</x>
+                      <y>10</y>
                       <width>106</width>
                       <height>30</height>
                      </rect>
@@ -3408,8 +3711,8 @@ BDT Table</string>
                     </property>
                     <property name="geometry">
                      <rect>
-                      <x>70</x>
-                      <y>6</y>
+                      <x>24</x>
+                      <y>10</y>
                       <width>103</width>
                       <height>30</height>
                      </rect>
@@ -3492,7 +3795,7 @@ BDT Table</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1912</width>
+     <width>1908</width>
      <height>23</height>
     </rect>
    </property>
@@ -4129,7 +4432,6 @@ BDT Table</string>
   <tabstop>selAll</tabstop>
   <tabstop>currXY</tabstop>
   <tabstop>chatterBox</tabstop>
-  <tabstop>paramTabs</tabstop>
   <tabstop>standardCell</tabstop>
   <tabstop>cellShowTarg</tabstop>
   <tabstop>bursterCell</tabstop>

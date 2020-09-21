@@ -278,6 +278,10 @@ void SimScene::drawFile()
 // We don't try to keep cell, fiber, and line segment numbers current in the
 // D array in real time.  When it is time to save info to a file, we scan the
 // graphic objects and put the current graphical info into the D array.
+// We also do not keep the axon coord lists up to date, so zero them out.
+// If a synapse/connector is in the drawing, we will pick it up when we
+// scan the objects.
+
 void SimScene::coordsToRec()
 {
    int d_idx,offset, targ_idx;
@@ -287,6 +291,12 @@ void SimScene::coordsToRec()
    F_NODE *fnode;
    C_NODE *cnode;
    lineSegsIter iter;
+
+   for (int node = FIRST_INODE; node <= LAST_INODE; ++node) 
+      if (D.inode[node].node_type == CELL)
+         memset(&D.inode[node].unode.cell_node.cell_axon,0,sizeof(D.inode[node].unode.cell_node.cell_axon));
+      else if (D.inode[node].node_type == FIBER)
+         memset(&D.inode[node].unode.fiber_node.fiber_axon,0,sizeof(D.inode[node].unode.fiber_node.fiber_axon));
 
    auto list = items();
    QPointF pt1;

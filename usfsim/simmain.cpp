@@ -17,21 +17,50 @@ This file is part of the USF Neural Simulator suite.
 */
 
 
-#include "simwin.h"
 #include <QApplication>
+#include <getopt.h>
+#include "simwin.h"
 
 bool Debug = false;
+extern int winWidth;
+extern int winHeight;
+
+static void parse_args(int, char **);
 
 int main(int argc, char *argv[])
 {
-   if (argc > 1)
-      if (strcmp(argv[1],"-d") == 0)
-         Debug = true;
-
+   parse_args(argc,argv);
    QApplication a(argc, argv);
    SimWin w;
    if (Debug)
       w.printMsg("Debug output turned on");
    w.show();
    return a.exec();
+}
+
+static void parse_args(int argc, char *argv[])
+{
+   int cmd, tmp = 0;
+   static struct option opts[] = 
+   {
+      {"g", required_argument, NULL, 'g'},
+      {"d", no_argument, NULL, 'd'},
+      { 0,0,0,0} 
+   };
+   while ((cmd = getopt_long(argc, argv, "dg:", opts, NULL )) != -1)
+   {
+      switch (cmd)
+      {
+         case 'd':
+               sscanf(optarg, "%d", &tmp);
+               Debug = tmp;
+               break;
+         case 'g':
+               sscanf(optarg, "%dx%d", &winWidth,&winHeight);
+               break;
+         case '?':
+         default:
+           break;
+      }
+   }
 }

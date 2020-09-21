@@ -24,6 +24,7 @@ This file is part of the USF Neural Simulator suite.
 #include <QProxyStyle>
 #include <QProcess>
 #include <QTimer>
+#include <QMouseEvent>
 #include "c_globals.h"
 #include "launch_model.h"
 #include "sim_proc.h"
@@ -60,6 +61,7 @@ class launchWindow : public QDialog
       void edtSel();
       void customSel();
       void saveSnd();
+      void adjustLaunchFibers();
       void reParent(bool);
 
    private slots:
@@ -87,6 +89,7 @@ class launchWindow : public QDialog
 
    protected:
       void closeEvent(QCloseEvent *evt) override;
+      void mouseReleaseEvent(QMouseEvent *) override;
       bool event(QEvent* event) override;
       void loadSettings();
       void saveSettings();
@@ -108,6 +111,7 @@ class launchWindow : public QDialog
       int getMaxPop(int);
       void initAnalogRecs();
       void initHostNameRecs();
+      bool validateFiles();
 
    private:
       SimWin* mainwin;

@@ -29,6 +29,19 @@ override_dh_auto_configure:
 # we don't need it, so do nothing 
 override_dh_usrlocal:
 
+# on the lab build system, the mxe qt version is later than the
+# linux one. The test check: target in the makefile tries to 
+# rebuild the moc*.cpp files, but since the mxe moc program
+# runs last and builds them again, linux cannot compile the new versions with
+# old version of moc mostly because the .h files are different.  One solution,
+# don't run the test target, it doesn't help us
+override_dh_auto_test:
+
+# sometimes weird race conditions with parallel builds. We'll wait.
+override_dh_auto_build:
+	make -j1
+
+
 # debmake generated override targets
 # This is example for Cmake (See http://bugs.debian.org/641051 )
 #override_dh_auto_configure:

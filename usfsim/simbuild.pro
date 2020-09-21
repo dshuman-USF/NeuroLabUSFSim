@@ -25,8 +25,8 @@ QMAKE_LFLAGS += -Wl,--wrap=getline --emrun
 }
 
 win32 {
-   QMAKE_CXXFLAGS += -O2 -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE
-    QMAKE_CLAGS += -O2 -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE
+   QMAKE_CXXFLAGS += -O2 -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE -I/usr/local/include
+    QMAKE_CFLAGS += -O2 -D__USE_MINGW_ANSI_STDIO -D_GNU_SOURCE
    LIBS += -lwinpthread
    CONFIG -= debug
 }
@@ -44,6 +44,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
+   affmodel.cpp \
         simmain.cpp \
         simwin.cpp \
     sim_impl.cpp \
@@ -53,7 +54,6 @@ SOURCES += \
     fileio.c \
     swap.c \
     util.c \
-    inode_choose.c \
     launchwindow.cpp \
     launch_impl.cpp \
     launch_model.cpp \
@@ -76,6 +76,7 @@ SOURCES += \
     finddialog.cpp
 
 HEADERS += \
+   affmodel.h \
         simwin.h \
     simscene.h \
     sim2build.h \
@@ -102,7 +103,8 @@ HEADERS += \
     chglog.h \
     lin2ms.h \
     wavemarkers.h \
-    finddialog.h
+    finddialog.h \
+    common_def.h
 
 FORMS += \
     simwin.ui \

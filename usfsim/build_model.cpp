@@ -24,6 +24,7 @@ This file is part of the USF Neural Simulator suite.
 #include <typeinfo>
 #include <math.h>
 #include "build_model.h"
+#include "simscene.h"
 #include "c_globals.h"
 
 using namespace std;
@@ -106,7 +107,7 @@ synItem *synModel::getItem(const QModelIndex &index) const
 
 // add new rec at row
 // rec.node tells us where to add it
-// rec.syn_type tells us if it is norm parent or pre/post child
+// rec.syn_type tells us if it is norm parent, learn, or pre/post child
 // if child, rec.parent tells the parent, pre or post determines order
 bool synModel::addRow(synRec& rec, QModelIndex& newidx)
 {
@@ -116,7 +117,7 @@ bool synModel::addRow(synRec& rec, QModelIndex& newidx)
    bool success = true;
    synItem* parentItem;
 
-   if (type == SYN_NORM)
+   if (type == SYN_NORM || type == SYN_LEARN)
    {
       parentItem = getItem(parent); // root item, children are norm syns
       root_row = rec.rec[SYN_NUM].toInt()-1;
@@ -218,16 +219,26 @@ QVariant synModel::data(const QModelIndex &index, int role) const
 
    int col = index.column();
    synItem *item;
+   int type;
 
    switch (role)
    {
       case Qt::DisplayRole:
       case Qt::EditRole:
          item = getItem(index);
-         if ((col == SYN_NAME || col == SYN_TYPE) && item->synType() != SYN_NORM)
+         type =item->synType();
+         if ((col == SYN_NAME || col == SYN_TYPE) && type != SYN_NORM && type != SYN_LEARN)
             ret = "     " + item->data(col).toString();
-         else if ((col == SYN_NUM && item->synType() == SYN_NORM))
+         else if (col == SYN_NUM && (type == SYN_NORM || type == SYN_LEARN))
             ret = item->data(col).toString() + "     ";
+         else if (type != SYN_LEARN && (col == SYN_LRN_WINDOW || col == SYN_LRN_DELTA || col == SYN_LRN_MAX))
+            ; // do nothing
+         else if (col == SYN_EQPOT || col == SYN_TC || col == SYN_LRN_DELTA || col == SYN_LRN_MAX)
+         {
+            double num;
+            num = item->data(col).toDouble();
+            ret = QString::number(num,'f',4);
+         }
          else
             ret = item->data(col);
          break;
@@ -324,26 +335,35 @@ bool synModel::hasPost(const QModelIndex& index)
 // only H headers, not using V headers
 QVariant synModel::headerData(int section,Qt::Orientation orientation, int role) const
 {
-   if (role == Qt::DisplayRole)
+   if (orientation == Qt::Horizontal)
    {
-      if (orientation == Qt::Horizontal)
+      if (role == Qt::DisplayRole)
       {
-         switch (section)
-         {
-            case 0:
-               return QString("Number");
-            case 1:
-               return QString("Name");
-            case 2:
-               return QString("Type");
-            case 3:
-               return QString("Eq Potential (mv)");
-            case 4:
-               return QString("Time Constant (ms)");
-            case 5:
-               return QString("(debug)parent");
-         }
-      }
+        switch (section)
+        {
+           case SYN_NUM:
+              return QString("Number");
+           case SYN_NAME:
+              return QString("Name");
+           case SYN_TYPE:
+              return QString("Type");
+           case SYN_EQPOT:
+              return QString("Equilibrium\n Potential (mv)");
+           case SYN_TC:
+              return QString("Time\nConstant (ms)");
+           case SYN_LRN_WINDOW:
+              return QString("Learn\nWindow (ticks)");
+           case SYN_LRN_DELTA:
+              return QString("Strength\nMultiplier");
+           case SYN_LRN_MAX:
+              return QString("Max/Min\nStrength");
+           case SYN_PARENT:
+              return QString();
+              //return QString("(debug)parent");
+        }
+     }
+     else if (role == Qt::TextAlignmentRole)
+        return Qt::AlignHCenter + Qt::AlignVCenter;
    }
    return QVariant();
 }
@@ -550,6 +570,7 @@ bool synItem::removeChildren(int position, int count)
 synDoubleSpin::synDoubleSpin(QWidget *parent): QDoubleSpinBox(parent)
 {
 }
+
 synDoubleSpin::~synDoubleSpin()
 {
 }
@@ -562,17 +583,16 @@ synSpin::~synSpin()
 {
 }
 
-
-
 QWidget* synSpin::createEditor(QWidget *parent, const QStyleOptionViewItem & /*option*/, const QModelIndex& /* index */) const
 {
-       synDoubleSpin* editor = new synDoubleSpin(parent);
-       editor->setFrame(true);
-       editor->setRange(spinMin,spinMax);
-       editor->setAlignment(Qt::AlignRight);
-       editor->setDecimals(decimals);
-       editor->setKeyboardTracking(false);  // no event for each keypress
-       return editor;;
+   synDoubleSpin* editor = new synDoubleSpin(parent);
+   editor->setFrame(true);
+   editor->setRange(spinMin,spinMax);
+   editor->setAlignment(Qt::AlignRight);
+   editor->setDecimals(decimals);
+//   editor->setKeyboardTracking(false);  // no event for each keypress
+   connect(editor, QOverload<double>::of(&QDoubleSpinBox::valueChanged),this, &synSpin::synSpinValueChg);
+   return editor;;
 }
 
 void synSpin::setEditorData(QWidget *editor, const QModelIndex &index) const
@@ -583,7 +603,9 @@ void synSpin::setEditorData(QWidget *editor, const QModelIndex &index) const
    {
       if (isnan(spin->old))
          spin->old = value;
+      spin->blockSignals(true);   // program versus user changes
       spin->setValue(value);
+      spin->blockSignals(false);
    }
 }
 
@@ -598,6 +620,13 @@ void synSpin::setModelData(QWidget *editor, QAbstractItemModel *model, const QMo
     }
 }
 
+void synSpin::synSpinValueChg(double)
+{
+   SimScene* par = dynamic_cast<SimScene*>(parent());
+   if (par)
+      par->setBuildDirty(true);
+}
+
 void synSpin::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const
 {
     editor->setGeometry(option.rect);
@@ -606,6 +635,85 @@ void synSpin::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &
 QString synSpin::displayText(const QVariant &value, const QLocale &locale) const
 {
     return locale.toString(value.toDouble(), 'f', decimals);
+}
+
+
+synIntegerSpin::synIntegerSpin(QWidget *parent): QSpinBox(parent)
+{
+}
+
+synIntegerSpin::~synIntegerSpin()
+{
+}
+
+synIntSpin::synIntSpin(QObject *parent, int min, int max) : QStyledItemDelegate(parent),spinMin(min),spinMax(max)
+{
+}
+
+synIntSpin::~synIntSpin()
+{
+}
+
+
+QWidget* synIntSpin::createEditor(QWidget *parent, const QStyleOptionViewItem & /*option*/, const QModelIndex& index) const
+{
+   const synModel* model = dynamic_cast<const synModel*>(index.model());
+   synItem *curr;
+   if (model)
+      curr = model->getItem(index);
+   else
+      return nullptr;
+   if (curr->synType() != SYN_LEARN)
+      return nullptr;
+   synIntegerSpin* editor = new synIntegerSpin(parent);
+   editor->setFrame(true);
+   editor->setRange(spinMin,spinMax);
+   editor->setAlignment(Qt::AlignRight);
+//   editor->setKeyboardTracking(false);  // no event for each keypress
+   connect(editor, QOverload<int>::of(&QSpinBox::valueChanged),this, &synIntSpin::synIntValueChg);
+   return editor;;
+}
+
+void synIntSpin::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+   int value = index.model()->data(index, Qt::EditRole).toInt();
+   synIntegerSpin *spin = dynamic_cast<synIntegerSpin*>(editor);
+   if (spin)
+   {
+      if (isnan(spin->old))
+         spin->old = value;
+      spin->blockSignals(true);
+      spin->setValue(value);
+      spin->blockSignals(false);
+   }
+}
+
+void synIntSpin::synIntValueChg(int)
+{
+   SimScene* par = dynamic_cast<SimScene*>(parent());
+   if (par)
+      par->setBuildDirty(true);
+}
+
+void synIntSpin::setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const
+{
+    synIntegerSpin *spin = dynamic_cast<synIntegerSpin*>(editor);
+    if (spin)
+    {
+       int value = spin->value();
+       if (spin->old != value)
+          model->setData(index, value, Qt::EditRole);
+    }
+}
+
+void synIntSpin::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &) const
+{
+    editor->setGeometry(option.rect);
+}
+
+QString synIntSpin::displayText(const QVariant &value, const QLocale &locale) const
+{
+    return locale.toString(value.toInt());
 }
 
 synEdit::synEdit(QObject *parent, bool roMode) : QStyledItemDelegate(parent), readOnly(roMode)

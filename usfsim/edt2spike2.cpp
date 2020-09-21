@@ -211,7 +211,7 @@ void readFile()
    }
    if (Intervals.size() > 1)
    {
-      cout << "The are variable sampling rates for this file." << endl
+      cout << "There are variable sampling rates for this file." << endl
            << "Here are the rates: " << endl; 
       for (auto iter : Intervals)
          cout << "Rate: " << iter.first << " Occurences: " << iter.second << endl;

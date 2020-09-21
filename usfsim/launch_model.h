@@ -30,21 +30,24 @@ This file is part of the USF Neural Simulator suite.
 #include <QStringList>
 #include <QMimeData>
 #include <list>
-
+#include "common_def.h"
 
 
 // column offsets of bdt table
 const int BDT_CELL_FIB=0;
 const int BDT_POP=1;
 const int BDT_MEMB=2;
-const int BDT_NUM_COL = BDT_MEMB+1;
+const int BDT_TYPE=3;
+const int BDT_NUM_COL = BDT_TYPE+1;
+const int BDT_VISABLE_NUM_COL = BDT_MEMB+1;
 
 // column offsets of plot table
-const int PLOT_POP=0;
-const int PLOT_MEMB=1;
-const int PLOT_PLOT=2;
-const int PLOT_BINWID=3;
-const int PLOT_SCALE=4;
+const int PLOT_CELL_FIB=0;
+const int PLOT_POP=1;
+const int PLOT_MEMB=2;
+const int PLOT_TYPE=3;
+const int PLOT_BINWID=4;
+const int PLOT_SCALE=5;
 const int PLOT_NUM_COL=PLOT_SCALE+1;
 
 // widget offsets for analog widgets
@@ -58,8 +61,6 @@ const int ANALOG_NUM_COL = ANALOG_SCALE+1;
 // widget offset for hostname widget
 const int HOSTNAME_ID=0;
 const int HOSTNAME_NUM_COL = HOSTNAME_ID+1;
-
-enum CellType {STD_CELL, BURSTER_CELL, PSR_CELL, LUNG_CELL}; 
 
 const QStringList stdCombo(
       {
@@ -101,6 +102,17 @@ const QStringList lungCombo(
         "Abdominal muscle activation limited, 0 → 1",
         "Net laryngeal muscle activation limited, −1 → 1"
       });
+
+const QStringList afferentCombo(
+      {
+        "Events",
+        "Signal",
+        "Events And Signal",
+        "Instantaneous Pop Activity",
+        "Use Bin Width and Scale ==>"
+      });
+
+const QString fiberPlotType("Event");
 
 struct plotRec 
 {
@@ -268,7 +280,7 @@ class plotDropData : public QMimeData
 class plotModel : public QAbstractTableModel
 {
    Q_OBJECT
-   friend  plotEdit;
+   friend plotEdit;
    friend plotCombo;
    friend plotSpin;
 
@@ -277,6 +289,7 @@ class plotModel : public QAbstractTableModel
       virtual ~plotModel();
       void addRow(plotRec&, int row=-1);
       bool readRec(plotRec&,int);
+      bool updateRec(plotRec&,int);
       int  numRecs() { return plotData[currModel].size();}
       void delRow(int);
       void dupModel(int,int);
@@ -304,8 +317,8 @@ class plotModel : public QAbstractTableModel
       QVariant headerData(int section,Qt::Orientation orientation, int role) const override;
       Qt::ItemFlags flags(const QModelIndex&) const override;
       int currModel = 0;
-      mutable QString colThree= "Bin Width (ms)";
-      mutable QString colFour = "Bin Scaling";
+      mutable QString colFour= "Bin Width (ms)";
+      mutable QString colFive = "Bin Scaling";
       mutable plotPages plotData;
 };
 
@@ -331,6 +344,7 @@ class bdtModel : public QAbstractTableModel
       void addRow(bdtRec&, int row=-1);
       void delRow(int);
       bool readRec(bdtRec&,int);
+      bool updateRec(bdtRec&,int);
       int  numRecs() { return bdtData[currModel].size();}
       void dupModel(int,int);
       void setCurrentModel(int curr) { currModel = curr;};

@@ -34,7 +34,9 @@ This file is part of the USF Neural Simulator suite.
 #define _GNU_SOURCE
 #endif
 #include <stdio.h>
+#include "common_def.h"
 #include "util.h"
+
 
 #define DECLARE_PTR_STR(v,t) t *v; char *v##_str = #t;
 
@@ -48,6 +50,21 @@ typedef struct {
   unsigned int initialized:1;
 } Slice;
 
+#define LRN_SIZE 5
+#define LRN_FREE -1 
+#define LRN_GROWBY  5
+
+
+// Info learning synapses need to manage the learn process
+typedef struct 
+{ 
+   int recv_pop;  // receiving fiber/cell
+   int send_term;  // receiving fiber/cell
+   int recv_term; // receiving terminal
+   int ariv_time; // arrival time (i.e., delay)
+} LEARN;
+
+
 typedef struct
 {
   float G;//state
@@ -60,6 +77,13 @@ typedef struct
   int stidx;
   int syntype;
   int synparent;
+  float initial_strength;
+  float lrn_strength;
+  int   lrnWindow;
+  float lrnStrMax;
+  float lrnStrDelta;
+  int lrn_size;
+  LEARN *lrn;//indirect
 } Syn;
 
 typedef struct
@@ -91,6 +115,8 @@ typedef struct
 
 typedef struct
 {
+  int state;
+  double signal;
   int target_count;
   Target *target;
 } Fiber;
@@ -122,6 +148,12 @@ typedef struct
   float fuzzy_range; /* if fuzzy, width of range to randomly vary stim fire (ms) */
   int next_stim;//skip
   int next_fixed;//skip
+  char *afferent_file_name;//string
+  int num_aff;
+  int offset;
+  double aff_val[MAX_AFFERENT_PROB];
+  double aff_prob[MAX_AFFERENT_PROB];
+  void *affStruct;
 } FiberPop;
 
 typedef struct
@@ -165,6 +197,9 @@ typedef struct
 {
   float EQ;
   float DCS;
+  int   lrnWindow;
+  float lrnStrMax;
+  float lrnStrDelta;
   int SYN_TYPE;
   int PARENT;
 } SynType;
@@ -192,6 +227,7 @@ typedef struct
 
 typedef struct
 {
+  int file_subversion;
   int slice_count;
   Slice *slice;  
 

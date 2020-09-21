@@ -23,6 +23,7 @@ This file is part of the USF Neural Simulator suite.
 #include <QValidator>
 #include <QPrinter>
 #include <QtGlobal>
+#include <QScrollArea>
 #include "simwin.h"
 #include "ui_simwin.h"
 #include "sim2build.h"
@@ -34,25 +35,49 @@ This file is part of the USF Neural Simulator suite.
 
 #if defined Q_OS_WIN
 #include <windows.h>
+#include <stdio.h>
+#include <io.h>
+#include <fcntl.h>
+#include <iostream>
+#include <fstream>
 #endif
 
 using namespace std;
 
 extern bool Debug;
+// These magic numbers come from the designer.
+// No property holds these.  This is what looks good
+// on my monitor. Maybe not on others.
+int winWidth = 1900;
+int winHeight = 940;
 
 // sim scene, var & other setups from original newsned.c
 void SimWin::simInit()
 {
 #if defined Q_OS_WIN
+   HANDLE stdHandle;
+   int con;
+   FILE* fp;
+
    if (Debug)
    {
-      if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-      {
-          freopen("CON", "w", stdout);
-          freopen("CON", "w", stderr);
-      }
+      if (!AttachConsole(ATTACH_PARENT_PROCESS))
+            AllocConsole();
+      stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+      con = _open_osfhandle((long long) stdHandle, _O_TEXT);
+      fp = _fdopen(con,"w");
+      *stdout = *fp;
+      setvbuf(stdout,NULL,_IONBF,0);
+
+      stdHandle = GetStdHandle(STD_ERROR_HANDLE);
+      con = _open_osfhandle((long long) stdHandle, _O_TEXT);
+      fp = _fdopen(con,"w");
+      *stderr = *fp;
+      setvbuf(stderr,NULL,_IONBF,0);
+      printf("Console for simbuild\n");
    }
 #endif
+   afferentModel = new affModel(this);
 
    loadSettings();
    launch = new launchWindow(this);  // we make just one of these and
@@ -76,6 +101,16 @@ void SimWin::simInit()
    ui->globLength->setValidator(new QDoubleValidator(1,86400,2));
    ui->iLmElmFiringRate->setValidator(new QDoubleValidator(1.0,10000.0,5));
 
+   // setup afferent table
+   connect(afferentModel,&affModel::notifyChg,this,&SimWin::fiberChanged);
+   ui->afferentTable->setModel(afferentModel);
+   ui->afferentTable->setAcceptDrops(true);
+   ui->afferentTable->setStyle(new dropStyle(style()));
+   ui->afferentTable->setItemDelegateForColumn(0, new affSrcDelegate);
+   ui->afferentTable->setItemDelegateForColumn(1, new affProbDelegate);
+   ui->afferentTable->horizontalHeader()->setVisible(true);
+   ui->afferentTable->verticalHeader()->setVisible(true);
+
      // I always use this style for Quit clickage
    ui->mainToolBar->widgetForAction(ui->actionQuit_2)->setStyleSheet("QWidget {color: darkred; font-style:bold;}");
 
@@ -85,6 +120,127 @@ void SimWin::simInit()
    ui->cellObjId->hide();
    ui->fiberObjId->hide();
    ui->synapseObjId->hide();
+
+    // This make sure you can scroll all the controls into
+    // view even on smaller/lower res  monitors.
+   ui->centralWidget->setMinimumSize(winWidth,winHeight);
+
+   scrollArea = new QScrollArea(this);
+   scrollArea->setWidgetResizable(true);
+   scrollArea->setWidget(ui->centralWidget);
+   QGridLayout *lay= new QGridLayout;
+   scrollArea->setLayout(lay);
+   setCentralWidget(scrollArea);
+   styleScroll();
+}
+
+// Make the scroll area scrollbars a bit different because there
+// are adjacent scrollbars in the drawing area and it is easy to get confused.
+void SimWin::styleScroll()
+{
+   QString style;
+
+      // Vertical
+   style += " QScrollBar:vertical {" 
+    " border: 2px solid grey;"
+    " background: #c0c0c0;"
+    " width:20px;    "
+    " margin: 21px 0px 21px 0px;"
+    "}";
+    style += " QScrollBar::handle:vertical {"
+    " background: #bad8ef;"
+    " min-height: 10px;"
+    "}";
+
+       // UP
+   style += " QScrollBar::sub-line:vertical {"
+    " border: 1px solid #b0b0b0;"
+    " background-color: #b0b0b0;"
+    " height: 20 px;"
+    " subcontrol-position: top;"
+    " subcontrol-origin: margin;"
+    "}";
+//   style += " QScrollBar::up-button:vertical {"
+//      " border: none; "
+//      " background: none;"
+//    " background-color: #b0b0b0;"
+//      "}";
+   style += " QScrollBar::up-arrow:vertical {"
+//      " border: none; "
+      " background-image: url(:/uparrow.png);"
+      " background-repeat: repeat-n;"
+      " background-position: center;"
+      "}";
+   style += " QScrollBar::sub-page:vertical {"
+      " background: none;"
+      "}";
+
+       // DOWN
+   style += " QScrollBar::add-line:vertical {"
+    " border: 1px solid #b0b0b0;"
+    " background-color: #b0b0b0;"
+    " height: 20 px;"
+    " subcontrol-position: bottom;"
+    " subcontrol-origin: margin;"
+    "}";
+   style += " QScrollBar::down-arrow:vertical {"
+      " background-image: url(:/downarrow.png);"
+      " background-repeat: repeat-n;"
+      " background-position: center;"
+      "}";
+   style += " QScrollBar::add-page:vertical {"
+      " background: none;"
+      "}";
+
+    // Horizontal
+   style += "\nQScrollBar:horizontal {" 
+    " border: 2px solid grey;"
+    " background: #b0b0b0;"
+    " height: 20px; "
+    " margin: 0 22px 0px 22px;"
+    "}";
+   style += " QScrollBar::handle:horizontal {"
+    " background: #bad8ef;"
+    " min-width: 40px;"
+    "}";
+
+     // LEFT
+   style += " QScrollBar::sub-line:horizontal {"
+    " border: 1px solid #b0b0b0;"
+    " background-color: #b0b0b0;"
+    " width: 20 px;"
+    " subcontrol-position: left;"
+    " subcontrol-origin: margin;"
+    "}";
+   style += " QScrollBar::left-arrow:horizontal {"
+      " background-image: url(:/leftarrow.png);"
+      " background-repeat: repeat-n;"
+      " background-position: center;"
+      "}";
+   style += " QScrollBar::sub-page:horizontal {"
+      " background: none;"
+      "}";
+
+     //RIGHT
+   style += " QScrollBar::add-line:horizontal {"
+    " border: 1px solid #b0b0b0;"
+    " background-color: #b0b0b0;"
+    " width: 20px;"
+    " subcontrol-position: right;"
+    " subcontrol-origin: margin;"
+    "}";
+   style += " QScrollBar::right-arrow:horizontal {"
+      " background-image: url(:/rightarrow.png);"
+      " background-repeat: repeat-n;"
+      " background-position: center;"
+      "}";
+   style += " QScrollBar::add-page:horizontal {"
+      "  background: none;"
+      "}";
+
+   scrollArea->setStyleSheet(style);
+
+
 }
 
 void SimWin::initScene()
@@ -180,6 +336,7 @@ void SimWin::resetNew()
    init_sp();         // Init the launch space
    launch->resetModels();
    scene->resetModels();
+   afferentModel->reset();
    Version = 5;       // defaults may be v5
    loadDefaults();
    scene->initControls();
@@ -231,6 +388,7 @@ void SimWin::keyPressEvent(QKeyEvent *k)
          break;
    }
 }
+
 
 void SimWin::loadSnd()
 {
@@ -735,6 +893,71 @@ void SimWin::doFiberElectric(bool on)
    }
 }
 
+void SimWin::doFiberAfferent(bool on)
+{
+   if (on)
+   {
+      int d_idx = ui->fiberObjId->text().toInt();
+      scene->fiberRecToUi(d_idx, AFFERENT);
+      scene->setFiberDirty(true);
+   }
+}
+
+void SimWin::addAfferentRow()
+{
+   int num = afferentModel->numRecs();
+
+   if (num < MAX_AFFERENT_PROB)
+   {
+      affRec rec = {0,0.0};
+      afferentModel->addRow(rec, -1);
+      ui->afferentTable->scrollToBottom();
+      QModelIndex cell = afferentModel->index(num,0);
+      ui->afferentTable->selectionModel()->select(cell,QItemSelectionModel::ClearAndSelect);
+   }
+}
+
+void SimWin::delAfferentRow()
+{
+   QModelIndex to_del = ui->afferentTable->selectionModel()->currentIndex();
+   if (to_del.row() != -1)
+      afferentModel->removeRow(to_del.row());
+}
+
+void SimWin::affRecToModel(F_NODE* fiber)
+{
+   afferentModel->reset();
+   affRec rec;
+   for (int row = 0; row < fiber->num_aff; ++row)
+   {
+      rec.rec[AFF_VAL] = fiber->aff_val[row];
+      rec.rec[AFF_PROB] = fiber->aff_prob[row];
+      afferentModel->addRow(rec,-1);
+   }
+   afferentModel->sortRows();
+}
+
+void SimWin::affModelToRec(F_NODE* fiber)
+{
+   affRec rec;
+   int num = afferentModel->numRecs();
+   fiber->num_aff = 0;
+    // clear out deleted rec vals
+   memset(fiber->aff_val,0,sizeof(fiber->aff_val));
+   memset(fiber->aff_prob,0,sizeof(fiber->aff_prob));
+   afferentModel->sortRows();
+   for (int row = 0; row < num; ++row)
+   {
+      if (afferentModel->readRec(rec,row))
+      {
+         fiber->aff_val[row] = rec.rec[AFF_VAL].toDouble();
+         fiber->aff_prob[row] = rec.rec[AFF_PROB].toDouble();
+         ++fiber->num_aff;
+      }
+   }
+}
+
+
 void SimWin::doGlobalBdt()
 {
    ui->globStepTime->setText("0.5000");
@@ -826,6 +1049,12 @@ void SimWin::fiberSendToLauncherBdt()
       scene->fiberViewSendToLauncherBdt();
 }
 
+void SimWin::fiberSendToLauncherPlot()
+{
+   if (launch)
+      scene->fiberViewSendToLauncherPlot();
+}
+
 void SimWin::cellSendToLauncherBdt()
 {
    if (launch)
@@ -881,9 +1110,7 @@ void SimWin::launchPopup()
    launch->show();
    launch->raise();
    showLaunch = true;
-   ui->cellSendLaunchBdt->setEnabled(true);
-   ui->cellSendLaunchPlot->setEnabled(true);
-   ui->fiberSendLaunchBdt->setEnabled(true);
+   scene->setSendControls();
    ui->actionRun_Simulation->setEnabled(false);
 }
 
@@ -891,9 +1118,7 @@ void SimWin::launchIsClosing()
 {
    launch->setVisible(false);
    showLaunch = false;
-   ui->cellSendLaunchBdt->setEnabled(false);
-   ui->cellSendLaunchPlot->setEnabled(false);
-   ui->fiberSendLaunchBdt->setEnabled(false);
+   scene->setSendControls();
    ui->actionRun_Simulation->setEnabled(true);
 }
 
@@ -959,6 +1184,43 @@ void SimWin::doFiberTypeFuzzy(bool /* checked*/)
 {
    scene->fiberTypeFuzzy();
 }
+
+// If the file is in the current directory, strip the path. 
+// The assumption is if the dir is copied, everything will be.
+// If the file is in another directory, keep the path. 
+// The assumption is the file is shared among multiple simulations.
+void SimWin::selAfferentFile()
+{
+   QDir dir = QDir::current();
+
+   QFileDialog openDlg(this,"Load An Afferent Source File");
+   openDlg.setFileMode(QFileDialog::ExistingFile);
+   openDlg.setViewMode(QFileDialog::Detail);
+   openDlg.setNameFilter("Spike2 (*.smr *.smrx)");
+   openDlg.setDirectory(dir);
+   openDlg.setLabelText(QFileDialog::DialogLabel::FileType,tr("Select file to use."));
+   openDlg.resize(QSize(900,500));
+   if (!openDlg.exec())
+      return;
+   QStringList list = openDlg.selectedFiles();
+   QString fName = list[0];
+
+   if (fName.length())
+   {
+      
+      QFileInfo info;
+      info.setFile(fName);
+      if (info.absolutePath() == dir.absolutePath())
+         fName = info.fileName();
+      if (ui->afferentFileName->text() != fName) // only dirty if changed
+      {
+         ui->afferentFileName->setText(fName);
+         scene->setFiberDirty(true);
+      }
+   }
+}
+
+
 
 void SimWin::doLaunchOnTop(bool onoff)
 {
@@ -1035,6 +1297,5 @@ void SimWin::doMonochrome(bool on_off)
    showMono = on_off;
    scene->doMonochrome(on_off);
 }
-
 
 

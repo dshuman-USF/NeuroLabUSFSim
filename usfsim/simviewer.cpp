@@ -81,7 +81,7 @@ void SimViewer::on_invertBW_stateChanged(int arg1)
 
 void SimViewer::closeEvent(QCloseEvent *evt)
 {
-   saveSettings();
+   on_actionQuit_triggered();
    evt->accept();
 }
 

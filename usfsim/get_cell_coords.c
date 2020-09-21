@@ -147,11 +147,11 @@ get_cell_coords (char *filename)
       S.net.cellpop[pn].name = strdup (tmp);
       
       if (f == 0) {
-	fprintf (stderr, "can't open %s: %s\n", tmp, strerror (errno));
+	fprintf (stdout, "can't open %s: %s\n", tmp, strerror (errno));
 	continue;
       }
       if (getline (&inbuf, &len, f) == -1) {
-	fprintf (stderr, "can't read %s: %s\n", tmp, strerror (errno));
+	fprintf (stdout, "can't read %s: %s\n", tmp, strerror (errno));
 	fclose (f);
 	continue;
       }
@@ -162,7 +162,7 @@ get_cell_coords (char *filename)
 	c->x = x; c->y = y; c->z = z;
       }
       if (cn < count)
-	fprintf (stderr, "error: only %d of %d read from %s\n", cn, count, tmp);
+	fprintf (stdout, "error: only %d of %d read from %s\n", cn, count, tmp);
       fclose (f);
       free(tmp);
     }

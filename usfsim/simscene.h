@@ -98,6 +98,8 @@ class SimScene : public QGraphicsScene
    friend SimWin;
    friend BaseNode;
    friend Connector;
+   friend synIntSpin;
+   friend synSpin;
 
    public:
       explicit SimScene(SimWin *parent=0);
@@ -121,6 +123,7 @@ class SimScene : public QGraphicsScene
       void deSelAll();
       void drawFile();
       void fiberViewSendToLauncherBdt();
+      void fiberViewSendToLauncherPlot();
       void cellViewSendToLauncherBdt();
       void cellViewSendToLauncherPlot();
       void clear();
@@ -131,6 +134,7 @@ class SimScene : public QGraphicsScene
       void setBuildDirty(bool);
       void setGlobalsDirty(bool);
       void setFileDirty(bool);
+      void setSendControls();
       void cellApply();
       void cellUndo();
       void fiberChkDirty();
@@ -162,6 +166,7 @@ class SimScene : public QGraphicsScene
       void saveSnd();
       void addSynPre();
       void addSynPost();
+      void addSynLearn();
       void createGroup();
       void importGroup();
       void exportGroup();
@@ -249,6 +254,9 @@ class SimScene : public QGraphicsScene
       synEdit* synType=nullptr; 
       synSpin *synEqPot=nullptr;
       synSpin *synTc=nullptr;
+      synIntSpin *synWindow=nullptr;
+      synSpin *synLrnDelta=nullptr;
+      synSpin *synLrnMax=nullptr;
 };
 
 #endif // SIMSCENE_H

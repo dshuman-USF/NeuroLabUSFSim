@@ -99,6 +99,8 @@ using waveMapIter = waveMap::iterator;
 
 class SimViewer;
 
+enum class PlotType {wave=1,event};
+
 // each one of these is a row of lines in the view.
 class CellRow : public QGraphicsItem
 {
@@ -115,6 +117,8 @@ class CellRow : public QGraphicsItem
       int numPts() {return yVal.size();}
       void setPlotColor(QColor c) {plot_color = c;}
       void setAPColor(QColor c) {ap_color = c;}
+      void setPlotType(PlotType type) {plotType = type;}
+      void setApScale(double scale) {apScale = scale;}
       void setHaveBound(bool);
       void Reset();
       int rownum;
@@ -133,8 +137,10 @@ class CellRow : public QGraphicsItem
       QColor   plot_color;
       QColor   ap_color=Qt::yellow;
       bool     haveAP=false;
+      PlotType  plotType;
       double    min=1000000;
       double    max=-1000000;
+      double    apScale = 0.5;
 };
 
 
@@ -209,7 +215,7 @@ class SimViewer : public QMainWindow
       void fwdInfo(QString);
 
    protected:
-      void closeEvent(QCloseEvent *evt);
+      void closeEvent(QCloseEvent *evt) override; 
       void resizeEvent(QResizeEvent *event) override;
       void setupViewer();
       void doTBase(int);
@@ -294,6 +300,7 @@ class SimViewer : public QMainWindow
       int endMargin=40;
       int topMargin;
       int rightMargin=20;
+      int bottomMargin=60;
       int      guiPort=0;
       bool useSocket;
       bool useFiles;

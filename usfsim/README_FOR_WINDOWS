@@ -1,18 +1,20 @@
                          README_FOR_WINDOWS
-                           January 6, 2020
+                           April 30, 2020
 
 The latest version of the usfsim package has been released.
 
-It is version 1.0.20. It is available on all of the Linux systems. There may be
+It is version 1.0.25. It is available on all of the Linux systems. There may be
 later versions available, this document is not always kept up to date.
 
 There is a Windows version.  All of the Windows files are in a .zip file
 that is named based on the version. For this release, the file is:
 
-usfsim_win_1.0.20.zip
+usfsim_win_1.0.25.zip
 
-The .zip file are located in /usr/local/share/usfsim.  On the bolser systems, a
-copy is in /datastore1/home/public.
+On the lab's local system, the .zip file is located in /usr/local/share/usfsim.
+On the bolser systems, a copy is in /datastore1/home/public. There is also a
+copy on the Blackfynn sparc web server in MorrisLabSoftwareReleases. Grab the
+latest version.
 
 The file contains:
 
@@ -51,13 +53,13 @@ The file contains:
    sim.pdf
    usfsim.pdf
 
-The current sim.pdf file is very much out of date with respect to the user
-interface. 
-
-The usesim.pdf is an update of the sim.pdf file. It is a work-in-progress.
+The usesim.pdf is an update of the Users Manaual.
 
 To get started on a Windows PC, make a working directory somewhere in your work
 area, get a copy of the zip file and unzip the zip file into this directory.
+Some people have unzipped it to the desktop, but you don't want to do this. It
+can create a few thousand wave files, and they all wind up on your desktop.
+Really, make a working directory, even it if in something like C:\usfsim.
 
 Create a desktop shortcuts to simbuild.exe and simviewer.exe and make the working
 directory be the "Start in:" directory.
@@ -68,13 +70,15 @@ If you want to have several working directories, you may want to set your PATH
 environment variable to include the path to the directory where you unzipped
 the zip file. The methods to do this vary in different versions of Windows. If
 you do not know how to do this, there are many web pages that explain how to do
-this.
+this. Once the executables are on your PATH, you can run it from any directory.
 
 
 Simulate away!
 
 
                             THE FINE PRINT
+
+Some of what follows is out of date. You can safely ignore this (mostly.)
 
 The biggest difference between the Linux and Windows versions is the format of
 the text files.
@@ -110,7 +114,6 @@ created these a binary files and force each line to end with only 0x0a. Since
 the only tools that use these are Linux ones, I did not see the need for
 Windows versions of the files. Scope, in particular, really did not like the
 WIN text format.
-
 
 I'm sure there will be problems. Let me know about them.
 

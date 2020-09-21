@@ -57,6 +57,7 @@ This file is part of the USF Neural Simulator suite.
 #include "lin2ms.h"
 #include "c_globals.h"
 #include "wavemarkers.h"
+#include "launch_model.h"
 
 QColor SimViewer::sceneFG=Qt::white;
 QColor SimViewer::sceneBG=Qt::black;
@@ -132,7 +133,7 @@ void SimViewer::setupViewer()
       viewerServer = new QTcpServer();
       QHostInfo hinfo = QHostInfo::fromName(hostName);
       cout << "SIMVIEWER: Using hostname " << hostName.toLatin1().data() << endl;
-      QHostAddress ip; 
+      QHostAddress ip;
       if (!hinfo.addresses().isEmpty())
          ip = hinfo.addresses().first();
       else
@@ -397,7 +398,7 @@ void SimViewer::loadSettings()
       ui->autoScale->setChecked(pos);
       doAutoScaleChg(pos);
       pos = settings.value("autoAntiClip",false).toBool();
-      ui->autoAntiClip->setChecked(autoAntiClip);
+      ui->autoAntiClip->setChecked(pos);
       doClipChanged(pos);
       onoff = settings.value("launchViewer").toBool();
       ui->launchViewer->setChecked(onoff);
@@ -565,7 +566,7 @@ void SimViewer::doTBase(int /*action*/)
    }
 
    ui->tbaseSlider->setSliderPosition(value);
-   text.sprintf("%d",value);
+   text = QString("%1").arg(value);
    ui->tbaseText->setText(text);
    int pos = ui->plotView->horizontalScrollBar()->sliderPosition();
    double currt0 = timeValFromPos(pos);
@@ -580,7 +581,7 @@ void SimViewer::doTBase(int /*action*/)
 void SimViewer::doSpacing(int value)
 {
    QString text;
-   text.sprintf("%d",value);
+   text = QString("%1").arg(value);
    ui->spaceText->setText(text);
    cellHeight = value;
    updateBounds();
@@ -593,7 +594,7 @@ void SimViewer::doVGain(int value)
 {
    QString text;
    double val = value / 5.0;
-   text.sprintf("%01.1f",val);
+   text = QString("%1").arg(val,2,'f',1);
    ui->vgainText->setText(text);
    vScale= val;
    updatePaint();
@@ -604,7 +605,7 @@ void SimViewer::doTime(int value)
 {
    QString text;
    if (value > 0)
-      text.sprintf("%d ms",value);
+      text = QString("%1 ms").arg(value);
    ui->timemarkerText->setText(text);
    tMark = value;
    updateTimeLines();
@@ -615,7 +616,7 @@ void SimViewer::doVolt(int value)
 {
    QString text;
    if (value >= 0)
-      text.sprintf("%d",value);
+      text = QString("%1").arg(value);
    ui->voltmarkerText->setText(text);
    voltMark = value;
    if (value < 0)
@@ -729,7 +730,7 @@ void SimViewer::toggleFit()
       double new_hscale = (vp.width()-rightMargin) / pts;
       hScaleSave = hScale;
       hScale = new_hscale;
-      double new_rows= (vp.height()-fontHeight) /numwaves;
+      double new_rows= (vp.height()-bottomMargin-(numwaves*fontHeight)) / (numwaves);
       cellHeightSave = cellHeight;
       cellHeight = new_rows;
         // remember where we are
@@ -844,7 +845,7 @@ void SimViewer::updateLineText()
    const char *varnames[] = {"", "Vm", "gK", "Thr", "Vm", "h", "Thr"};
    for (int wave = 0; wave < numwaves; ++wave)
    {
-      char *txt, *vartxt = 0, *var = nullptr, *val = nullptr;
+      char *txt = 0, *vartxt = 0, *var = nullptr, *val = nullptr;
       if (show_voltage_markers)
       {
          switch (popvars[wave])
@@ -888,6 +889,12 @@ void SimViewer::updateLineText()
             case 2:
                if (asprintf (&val, "%.2f", poptype[wave] ? voltMark / 60.0 : (voltMark + 20) / 10.0) == -1) exit (1);
                break;
+            case AFFERENT_INST:
+               if (asprintf (&val, "%d spk/s", voltMark * popcells[wave]) == -1) exit (1);
+               break;
+            case AFFERENT_BIN:
+               if (asprintf (&val, "%d spk/s", voltMark * (popcells[wave] & 0xffff)) == -1) exit (1);
+               break;
             default:
                if (popvars[wave] < 1)
                   break;
@@ -907,19 +914,44 @@ void SimViewer::updateLineText()
          {
             if (asprintf (&vartxt, "%.1f ms", stepSize) == -1) exit (1);
          }
+         else if ((popvars[wave] == STD_FIBER || popvars[wave] == AFFERENT_EVENT) && stepSize)
+         {
+            if (asprintf (&vartxt, " Events") == -1) exit (1);
+         }
+         else if (popvars[wave] == AFFERENT_SIGNAL && stepSize)
+         {
+            if (asprintf (&vartxt, " Signal") == -1) exit (1);
+         }
+         else if (popvars[wave] == AFFERENT_BOTH && stepSize)
+         {
+            if (asprintf (&vartxt, " Signal and Events") == -1) exit (1);
+         }
+         else if (popvars[wave] == AFFERENT_INST && stepSize)
+         {
+            if (asprintf (&vartxt, " %.1f ms",stepSize) == -1) exit (1);
+         }
+         else if (popvars[wave] == AFFERENT_BIN && stepSize)
+         {
+            if (asprintf (&vartxt, " %d ms",popcells[wave]>>16) == -1) exit (1);
+         }
          else
          {
-            if (asprintf (&vartxt, "%d ms", popvars[wave]) == -1) exit (1);
+            if (asprintf (&vartxt, "%d ms", popvars[wave]-4) == -1) exit (1);
          }
          var = vartxt;
       }
-      if (popvars[wave] < 4 && popvars[wave] > 0)
+      if (popvars[wave] > 0)
       {
-         if (asprintf (&txt, " %d %s %d %s %s", popids[wave], poplabel[wave].toLatin1().data(), popcells[wave], var, val) == -1) exit (1);
+         if (asprintf (&txt, "C %d %s %d %s %s", popids[wave], poplabel[wave].toLatin1().data(), popcells[wave], var, val) == -1) exit (1);
       }
       else if (popvars[wave] >= -16 && popvars[wave] <= -1)
       {
          if (asprintf (&txt, " %s %s", poplabel[wave].toLatin1().data(), val) == -1) exit (1);
+      }
+      else if (popvars[wave] >= AFFERENT_BIN && popvars[wave] <= STD_FIBER)
+      {
+//         if (asprintf (&txt, "F %d %s %s", popids[wave], poplabel[wave].toLatin1().data(), var) == -1) exit (1);
+         if (asprintf (&txt, "F %d %s %d", popids[wave], poplabel[wave].toLatin1().data(), popcells[wave]) == -1) exit (1);
       }
       else
       {
@@ -953,6 +985,7 @@ void SimViewer::updateCellRows()
    double actpotHeight;
    yPointsIter y_iter;
    actPotIter ap_iter;
+   PlotType type;
    ConstCellRowListIter rowIter;
    QColor plot_gc = colorFlag ? Qt::cyan : sceneFG;
    QColor ap_gc = colorFlag ? Qt::yellow : sceneFG;
@@ -969,11 +1002,14 @@ void SimViewer::updateCellRows()
       (*rowIter)->setPlotColor(plot_gc);
       (*rowIter)->setAPColor(ap_gc);
       rownum = (*rowIter)->rownum;
-      if (ap_flag && (*rowIter)->haveAP) // show them if you got them
-         actpotHeight = cellHeight * .5; // and make them big
+      type = (*rowIter)->plotType;
+       // show action potentials or fiber events pretending to be such.
+       // we show fiber events even if the ap_flag is false.
+      if ((ap_flag && (*rowIter)->haveAP) || (type == PlotType::event && (*rowIter)->haveAP))
+         actpotHeight = cellHeight * (*rowIter)->apScale; // and make them big
       else
          actpotHeight = 0;
-      if (autoScale) 
+      if (autoScale)
       {
         // we stretch pos values up to the max, neg down to bottom of font area
         // and zero stays zero.
@@ -997,6 +1033,7 @@ void SimViewer::updateCellRows()
         else
            nv_scale_n  = 1;
       }
+
       cellYOffset = rownum*cellHeight + cellHeight + rownum*fontHeight;
         // plot lines and action potentials for each box
       prev_x = prev_y = numeric_limits<int>::max();  // "impossible" values
@@ -1010,7 +1047,7 @@ void SimViewer::updateCellRows()
             if (*y_iter >= 0)
               y0 = -*y_iter*nv_scale_p + cellYOffset;
             else
-              y0 = -*y_iter*nv_scale_n + cellYOffset;
+              y0 = *y_iter*nv_scale_n + cellYOffset;
          }
          else if (autoAntiClip)
          {
@@ -1019,25 +1056,42 @@ void SimViewer::updateCellRows()
             else
               y0 = -*y_iter * nv_scale_n * vScale + cellYOffset;
          }
-         else 
+         else
             y0 = (-*y_iter*vScale) + cellYOffset;
-            
-            // only draw unique points, skip duplicates
-         if (x0 != prev_x || y0 != prev_y)
+
+            // Draw waveforms and perhaps APs
+         if (type == PlotType::wave)
          {
-            (*rowIter)->paintPts.emplace_back(x0,y0); // plot lines
+             // only draw unique points, skip duplicates
+            if (x0 != prev_x || y0 != prev_y)
+               (*rowIter)->paintPts.emplace_back(x0,y0); // plot lines
+             // Always draw action potentials or we may miss some because it may
+             // not be the first x0,y0, but a later one we may skip.
+            if (ap_flag && *ap_iter)
+               (*rowIter)->paintActPot.emplace_back(x0,y0,x0,y0-actpotHeight);
          }
-           // Always draw action potentials or we may miss some because it may
-           // not be the first x0,y0, but a later one we may skip.
-         if (ap_flag && *ap_iter)
-            (*rowIter)->paintActPot.emplace_back(x0,y0,x0,y0-actpotHeight);
+         else
+         {
+            // the spike flag for waveforms doubles as the event flag for events
+            if (*ap_iter)
+            {
+               (*rowIter)->paintPts.emplace_back(x0,y0); // plot vertical event line
+               (*rowIter)->paintPts.emplace_back(x0, y0 - cellHeight * (*rowIter)->apScale);
+               (*rowIter)->paintPts.emplace_back(x0,y0);
+            }
+            else
+            {
+               if (x0 != prev_x || y0 != prev_y)
+                  (*rowIter)->paintPts.emplace_back(x0,y0);
+            }
+         }
          prev_x = x0;
          prev_y = y0;
          if (y0 > maxYBound)
             maxYBound = y0;
       }
    }
-   maxYBound += 60;  // a bit of space at bottom so we can scroll everything into view
+   maxYBound += bottomMargin;  // a bit of space at bottom so we can scroll everything into view
 //clock_t end = clock();
 //double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 //cout << "time: " << elapsed_secs << endl;
@@ -1049,7 +1103,7 @@ void SimViewer::updateVoltLines()
    int row = 0;
    QColor gc = colorFlag ? synapse_gc[0] : sceneFG;
    QPen pen(gc);
-   int y0;
+   double y0;
 
    for (lineObjIter iter = voltLines.begin(); iter != voltLines.end(); ++iter,++row)
    {
@@ -1072,13 +1126,14 @@ void SimViewer::updateTimeLines()
 
    QColor gc;
    double xstep;
+
    if (stepSize != 0)
       xstep = (tMark * hScale) / stepSize;
    else
-      xstep = (tMark * hScale);
+      xstep = tMark * hScale;
    QRectF rect = plot->sceneRect();
-   int x_end = rect.right();
-   int y_end = rect.bottom();
+   double x_end = rect.right();
+   double y_end = rect.bottom();
    gc = colorFlag ? synapse_gc[1] : sceneFG;
    QPen pen(gc);
 
@@ -1091,7 +1146,7 @@ void SimViewer::updateTimeLines()
    {
       if (xstep < 2.0) // don't cover up everything
          xstep = 2.0;
-      for (int x = 0 ; x < x_end; x += xstep)
+      for (double x = 0 ; x < x_end; x += xstep)
       {
          QGraphicsLineItem* new_tline = new QGraphicsLineItem(x,0,x,y_end,timeLineParent);
          new_tline->setPen(pen);
@@ -1136,7 +1191,7 @@ void SimViewer::doShowBoxes(bool onoff)
 }
 
 /* This processes the current wave stream from socket or file, reading and
-   loading vars and updating display. 
+   loading vars and updating display.
 */
 void SimViewer::loadWave(stringstream& waveStrm)
 {
@@ -1151,29 +1206,26 @@ void SimViewer::loadWave(stringstream& waveStrm)
 
    int n;
    char *p;
-   stepSize = 0;
    char inbuf[80] = {0};
 
-       // always read some of the header.
-   if (!waveStrm.getline (inbuf, sizeof(inbuf)))
-      bailout(1);
-   if (sscanf (inbuf, "%d %lf", &numsteps, &stepSize) != 2)
-      bailout(2);
-   if (!waveStrm.getline (inbuf, sizeof(inbuf)))
-      bailout(3);
-   if (sscanf(inbuf,"%d",&numwaves) != 1)
-      cout << "4 " << inbuf << endl;
-
-   if (numsteps != TS)
+   if (firstFile) // read the header, same in every wave file. If it changes, things break
    {
-      fprintf (stderr, "simviewer is set up for %d time steps per wave file\n", TS);
-      bailout(5);
-   }
+      if (!waveStrm.getline (inbuf, sizeof(inbuf)))
+         bailout(1);
+      if (sscanf (inbuf, "%d %lf", &numsteps, &stepSize) != 2)
+         bailout(2);
+      if (!waveStrm.getline (inbuf, sizeof(inbuf)))
+         bailout(3);
+      if (sscanf(inbuf,"%d",&numwaves) != 1)
+         bailout(4);
 
-   if (firstFile)
-   {
+      if (numsteps != TS)
+      {
+         fprintf (stderr, "simviewer is set up for %d time steps per wave file\n", TS);
+         bailout(5);
+      }
+
          // allocate a display row object for each wave/cell
-      firstFile = false;
       for (int cell = 0; cell < numwaves; cell++)
       {
          CellRow* newrow = new CellRow(cell,Qt::cyan,lineParent);
@@ -1202,32 +1254,60 @@ void SimViewer::loadWave(stringstream& waveStrm)
          text->setFont(itemFont);
          textItems.push_back(text);
       }
-   }
-   // read header
-   int tmp_v1, tmp_v2, wave;
-   for (wave = 0; wave < numwaves; wave++)
-   {
-      if (!waveStrm.getline (inbuf, sizeof(inbuf))
-            || sscanf (p = inbuf, "%d %d%n", &tmp_v1, &tmp_v2, &n) != 2)
-         bailout(6);
-      popids[wave] =tmp_v1;
-      popcells[wave]=tmp_v2;
-      if (sscanf (p = inbuf + n, "%d %d %n", &tmp_v1, &tmp_v2, &n) == 2)
+
+      // read info for each channel/wave
+      int tmp_v1, tmp_v2, wave;
+      for (wave = 0; wave < numwaves; wave++)
       {
-         popvars[wave] = tmp_v1;
-         poptype[wave] = tmp_v2;
-         int e = strlen (p += n) - 1;
+         if (!waveStrm.getline (inbuf, sizeof(inbuf))
+               || sscanf (p = inbuf, "%d %d%n", &tmp_v1, &tmp_v2, &n) != 2)
+            bailout(6);
+         popids[wave] =tmp_v1;
+         popcells[wave]=tmp_v2;
+         if (sscanf (p = inbuf + n, "%d %d %n", &tmp_v1, &tmp_v2, &n) == 2)
+         {
+            popvars[wave] = tmp_v1;
+            poptype[wave] = tmp_v2;
+            if (tmp_v1 <= STD_FIBER && tmp_v1 >= AFFERENT_BOTH)
+            {
+               cellRows[wave]->setPlotType(PlotType::event);
+               if (tmp_v1 == AFFERENT_BOTH)
+                  cellRows[wave]->setApScale(0.25); 
+            }
+            else
+               cellRows[wave]->setPlotType(PlotType::wave);
+            int e = strlen (p += n) - 1;
+            while (e > 0 && !isgraph (p[e]))
+               p[e--] = 0;
+            poplabel[wave]=p;
+         }
+         else
+         {
+            popvars[wave]=0;
+            poptype[wave]=0;
+            poplabel[wave]="";
+         }
+      }
+      firstFile = false;
+   }
+   else 
+   {
+      waveStrm.getline (inbuf, sizeof(inbuf)); // skip header
+      waveStrm.getline (inbuf, sizeof(inbuf));
+      //if anything but text changes, everything breaks,
+      // but pick up changes from mid-run update.
+      for (int wave = 0; wave < numwaves; wave++) // if anything but text changes, 
+      {                                           // everything breaks.
+         waveStrm.getline (inbuf, sizeof(inbuf));
+         p = inbuf;
+         sscanf(p, "%*d %*d %*d %*d %n", &n);
+         int e = strlen (p += n) - 1;        // possible text changes from mid-run update
          while (e > 0 && !isgraph (p[e]))
             p[e--] = 0;
          poplabel[wave]=p;
       }
-      else
-      {
-         popvars[wave]=0;
-         poptype[wave]=0;
-         poplabel[wave]="";
-      }
    }
+
      // Read in the wave info. numsteps is always 100, numwaves can vary, but
      // must be the same for every file.  2 cols per row, the first is the
      // value, the second is 1 if we should draw a spike line, 0 if not
@@ -1253,9 +1333,6 @@ void SimViewer::loadWave(stringstream& waveStrm)
               bailout(8);
             }
          }
-//         if (!waveStrm.getline (inbuf, sizeof(inbuf)) || 
-//             sscanf (inbuf, "%f %d", &tmp_popv, &tmp_popap) != 2)
-//            bailout(7);
          cellRows[yloop]->addYVal(tmp_popv);
          if (cellRows[yloop]->min > tmp_popv) // used for per-box auto scaling
          {
@@ -1290,7 +1367,7 @@ void SimViewer::loadWave(stringstream& waveStrm)
    }
 }
 
-// Time to change where we look for files. If we are currently reading files, 
+// Time to change where we look for files. If we are currently reading files,
 // and we really do chdir, then stop look for them. Need to hit the Restart
 // button to wake us back up.
 void SimViewer::doChDir()

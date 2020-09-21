@@ -68,6 +68,9 @@ static void popToStr(int type, QString& str)
      case ELECTRIC_STIM:
         str="Electric stimumulation";
         break;
+     case AFFERENT:
+        str="Afferent";
+        break;
      case CELL:
         str="Standard Cell";
         break;
@@ -557,7 +560,7 @@ void ChgLog::compareFibers(const I_NODE& old_i, const I_NODE& new_i)
             logstrm << popstr << " number of fibers from " << old_f.f_pop 
                     << " to " << new_f.f_pop  << "." << endl;
       }
-      else
+      else if (old_sub == ELECTRIC_STIM)
       {
          if (old_f.freq_type != new_f.freq_type)
          {
@@ -572,6 +575,36 @@ void ChgLog::compareFibers(const I_NODE& old_i, const I_NODE& new_i)
          if (old_f.fuzzy_range != new_f.fuzzy_range)
             logstrm << popstr << " fuzzy firing range from " << old_f.fuzzy_range 
                     << " to " << new_f.fuzzy_range  << "." << endl;
+      }
+      else if (old_sub == AFFERENT)
+      {
+         if (strcmp(old_f.afferent_file,new_f.afferent_file) != 0)
+            logstrm << "afferent file changed from:" << endl << old_f.afferent_file << endl
+                    << "to:" << endl << new_f.afferent_file  << "." << endl;
+         if (strcmp(old_f.afferent_prog,new_f.afferent_prog) != 0)
+            logstrm << "afferent program changed from:" << endl << old_f.afferent_prog
+                    << "to:" << endl << new_f.afferent_prog  << "." << endl;
+         if (old_f.offset != new_f.offset)
+            logstrm << "afferent signal offet changed from:" << old_f.offset
+                    << " to: " << new_f.offset << "." << endl;
+         int count = min(old_f.num_aff, new_f.num_aff);
+         for (int idx = 0; idx < count; ++idx)
+         {
+            if (old_f.aff_val[idx] != new_f.aff_val[idx] ||   // any change, print 
+                old_f.aff_prob[idx] != new_f.aff_prob[idx] ||  // both tables
+                old_f.num_aff != new_f.num_aff)
+            {
+               logstrm << "afferent probability table changed from:" << endl;
+               for (int idx = 0; idx < old_f.num_aff; ++idx)
+                  logstrm << "(" << old_f.aff_val[idx] << " , " << old_f.aff_prob[idx] << ") ";
+                logstrm << endl;
+               logstrm << "to:" << endl;
+               for (int idx = 0; idx < new_f.num_aff; ++idx)
+                  logstrm << "(" << new_f.aff_val[idx] << " , " << new_f.aff_prob[idx] << ") ";
+                logstrm << endl;
+                break;
+            }
+         }
       }
          // common params
       if (old_f.f_begin != new_f.f_begin)

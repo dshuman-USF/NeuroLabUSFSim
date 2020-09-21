@@ -26,8 +26,8 @@ This file is part of the USF Neural Simulator suite.
 #include <math.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "simulator.h"
 #include "simulator_hash.h"
@@ -70,7 +70,7 @@ syn_txt (int stidx, int type)
   case SYN_NORM: fmt = "%d"     ; break;
   case SYN_PRE: fmt  = "pre %d" ; break;
   case SYN_POST: fmt = "post %d"; break;
-  case SYN_NOT_USED: fmt = "%d" ; fprintf(stderr,"Unexpected unused synapse in report\n");break;
+  case SYN_NOT_USED: fmt = "%d" ; fprintf(stdout,"Unexpected unused synapse in report\n");break;
   }
   if (asprintf (&s, fmt, stidx + 1) == -1) exit (1);
   return s;
@@ -317,7 +317,7 @@ condi (void)
   fclose (f);
   free_array (&cv);
   free_array (&dv);
-  fprintf(stderr,"condi took %ld seconds\n", time (0) - start);
+  fprintf(stdout,"condi took %ld seconds\n", time (0) - start);
 }
 
 static void
@@ -336,7 +336,7 @@ quiet_model ()
       TargetPop *tp = fp->targetpop + tpidx;
    int explicit_syn_type=S.net.syntype[tp->TYPE-1].SYN_TYPE;
      if (explicit_syn_type  == SYN_NOT_USED) // probably a bug
-        fprintf(stderr,"Unexpected unused synapse in quiet model\n");
+        fprintf(stdout,"Unexpected unused synapse in quiet model\n");
       if (!S.ispresynaptic || explicit_syn_type == SYN_NORM) 
          tp->STR *= probability;
       else if (tp->STR < 1)
@@ -354,6 +354,8 @@ void read_snd()
   memset (D.inode, 0, sizeof D.inode);
   struct_info_fn = inode_struct_info;
   struct_members_fn = inode_struct_members;
+  struct stat filestat;
+
   if (!snd_ptr)
   {
     if (strlen(inPath))  // Don't use path in snd file, use input destination arg.
@@ -361,11 +363,32 @@ void read_snd()
        char *tmp = basename(S.snd_file_name);
        char *fname;
        asprintf(&fname,"%s%s",inPath,tmp);
+       stat(fname,&filestat);
+       if (S_ISDIR(filestat.st_mode))
+       {
+          printf("The filename %s is a directory, exiting program. . .\n",fname);
+          free(fname);
+          exit(1);
+       }
        f = fopen(fname,"r");
-       free(fname);
+       if (!f)
+       {
+          printf("Cannot open model paramter file %s, exiting program. . .\n", fname);
+          free(fname);
+          exit(1);
+       }
+       else
+          free(fname);
     }
     else
+    {
        f = fopen(S.snd_file_name,"r");
+       if (!f)
+       {
+          printf("Cannot open model paramter file %s, exiting program. . .\n", S.snd_file_name);
+          exit(1);
+       }
+    }
   }
   else
   {
@@ -420,12 +443,17 @@ int read_sim()
   if (sim_ptr == 0)
   {
     S.ifile = fopen(sim_fname,"r");
+    if (!S.ifile)
+    {
+       printf("Cannot open simulator parameter file %s, exiting program. . .\n",sim_fname);
+       exit(1);
+    }
   }
   else
   {
 #if defined __linux__
-    fprintf(stderr,"Using direct connect image\n");
-    fflush(stderr);
+    fprintf(stdout,"Using direct connect image\n");
+    fflush(stdout);
     S.ifile = fmemopen(sim_ptr,sim_size,"r");
 #else
     char namebuff[MAX_PATH];
@@ -469,16 +497,14 @@ int read_sim()
     exit (0);
   }
 
-  fprintf(stderr,"SIMRUN: read_sim, building network\n");
+  fprintf(stdout,"SIMRUN: Building network. . .\n");
   if (S.nonoise)
     quiet_model ();
   build_network ();
-  fprintf(stderr,"SIMRUN: network built\n");
   find_sample_cells ();
   if (condi_flag) 
     condi();
-
-  fprintf(stderr,"network built, running sim\n");
+  fprintf(stdout,"network built, running sim\n");
   if (sim_ptr)
   {
      free(sim_ptr);

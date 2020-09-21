@@ -111,26 +111,26 @@ getline(char **linebuf, size_t *linebufsz, FILE *file)
 void error(int status, int errnum, const char* format, ...)
 {
    fflush(stdout);
-   fprintf(stderr,"Error status %d num %d",status,errnum);
+   fprintf(stdout,"Error status %d num %d",status,errnum);
    va_list argptr;
    va_start(argptr,format);
-   vfprintf(stderr,format,argptr);
+   vfprintf(stdout,format,argptr);
    va_end(argptr);
-   fprintf(stderr,"\n");
-   fflush(stderr);
+   fprintf(stdout,"\n");
+   fflush(stdout);
    exit(1);
 }
 
 void error_at_line(int status, int errnum, const char* filename, unsigned int linenum,const char* format,...)
 {
    fflush(stdout);
-   fprintf(stderr,"Error status %d num %d file %s line number %u",status,errnum,filename,linenum);
+   fprintf(stdout,"Error status %d num %d file %s line number %u",status,errnum,filename,linenum);
    va_list argptr;
    va_start(argptr,format);
-   vfprintf(stderr,format,argptr);
+   vfprintf(stdout,format,argptr);
    va_end(argptr);
-   fprintf(stderr,"\n");
-   fflush(stderr);
+   fprintf(stdout,"\n");
+   fflush(stdout);
    exit(1);
 }
 

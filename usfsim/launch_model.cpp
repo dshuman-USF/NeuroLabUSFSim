@@ -21,6 +21,8 @@ This file is part of the USF Neural Simulator suite.
 
 #include <iostream>
 #include <QValidator>
+#include <QLabel>
+#include <QCheckBox>
 #include "launch_model.h"
 #include <string>
 #include <typeinfo>
@@ -136,6 +138,26 @@ bool plotModel::readRec(plotRec& sRec, int row)
    return found;
 }
 
+// access to underlying data struct
+bool plotModel::updateRec(plotRec& sRec, int row)
+{
+   bool found = false;
+   int size = plotData[currModel].size();
+   if (row >= 0 && row < size)
+   {
+      plotRowIter iter;
+      iter = plotData[currModel].begin();
+      advance(iter, row);
+      *iter = sRec;
+      found = true;
+      emit notifyChg(true);
+      QModelIndex idxl = createIndex(row,PLOT_MEMB,this);
+      QModelIndex idxr = createIndex(row,PLOT_TYPE,this);
+      dataChanged(idxl,idxr);
+   }
+   return found;
+}
+
 bool plotModel::canDropMimeData(const QMimeData *data, Qt::DropAction /*action*/, int /*row*/, int /*column*/, const QModelIndex &/*parent*/) const
 {
    QStringList types = mimeTypes();
@@ -150,8 +172,7 @@ bool plotModel::dropMimeData(const QMimeData *data, Qt::DropAction /*action*/, i
 {
    const plotDropData* dragRec = dynamic_cast <const plotDropData*>(data);
    if (row == -1)
-      cout << "unexpected -1 for row " << endl;
-
+      row = rowCount();
    if (dragRec)
    {
       QStringList types = mimeTypes();
@@ -190,24 +211,32 @@ QMimeData* plotModel::mimeData(const QModelIndexList &indexes) const
    return rec;
 }
 
-
-// composite key sort, order by pop, member, plot type
+// composite key sort, order by type, pop, member, plot type
 // Sort ascending
+// f 1 18 e
+// f 1 20 e
 static bool plotCompareRowsA(const plotRec& row1, const plotRec& row2)
 {
-   int r1c1,r1c2,r2c1,r2c2;  // numerical compares, not text
+   int r1c0, r2c0, r1c1,r1c2,r2c1,r2c2;  // numerical compares, not text
+   r1c0 = row1.rec[PLOT_CELL_FIB].toInt();
    r1c1 = row1.rec[PLOT_POP].toInt();
    r1c2 = row1.rec[PLOT_MEMB].toInt();
+   r2c0 = row2.rec[PLOT_CELL_FIB].toInt();
    r2c1 = row2.rec[PLOT_POP].toInt();
    r2c2 = row2.rec[PLOT_MEMB].toInt();
-   if (r1c1 < r2c1)
+   if (r1c0 < r2c0)
       return true;
-   if (r1c1 == r2c1)
+   if (r1c0 == r2c0)
    {
-      if (r1c2 < r2c2)
+      if (r1c1 < r2c1)
          return true;
-      if (r1c2 == r2c2)
-         return row1.rec[PLOT_PLOT] < row2.rec[PLOT_PLOT]; // text comp
+      if (r1c1 == r2c1)
+      {
+         if (r1c2 < r2c2)
+            return true;
+         if (r1c2 == r2c2)
+            return row1.rec[PLOT_TYPE] < row2.rec[PLOT_TYPE]; // text comp
+      }
    }
    return false;
 }
@@ -215,19 +244,26 @@ static bool plotCompareRowsA(const plotRec& row1, const plotRec& row2)
 // Sort descending
 static bool plotCompareRowsD(const plotRec& row1, const plotRec& row2)
 {
-   int r1c1,r1c2,r2c1,r2c2;  // numerical compares, not text
+   int r1c0,r2c0,r1c1,r1c2,r2c1,r2c2;  // numerical compares, not text
+   r1c0 = row1.rec[PLOT_CELL_FIB].toInt();
    r1c1 = row1.rec[PLOT_POP].toInt();
    r1c2 = row1.rec[PLOT_MEMB].toInt();
+   r2c0 = row2.rec[PLOT_CELL_FIB].toInt();
    r2c1 = row2.rec[PLOT_POP].toInt();
    r2c2 = row2.rec[PLOT_MEMB].toInt();
-   if (r1c1 > r2c1)
+   if (r1c0 > r2c0)
       return true;
-   if (r1c1 == r2c1)
+   if (r1c0 == r2c0)
    {
-      if (r1c2 > r2c2)
+      if (r1c1 > r2c1)
          return true;
-      if (r1c2 == r2c2)
-         return row1.rec[PLOT_PLOT] > row2.rec[PLOT_PLOT]; // text comp
+      if (r1c1 == r2c1)
+      {
+         if (r1c2 > r2c2)
+            return true;
+         if (r1c2 == r2c2)
+            return row1.rec[PLOT_TYPE] > row2.rec[PLOT_TYPE]; // text comp
+      }
    }
    return false;
 }
@@ -247,10 +283,10 @@ void plotModel::sort(int /*column*/, Qt::SortOrder order)
 QVariant plotModel::data(const QModelIndex &index, int role) const
 {
     QVariant ret;
-    int row, col;
+    int row, col, idx = 0;
     row = index.row();
     col = index.column();
-
+    
     switch (role)
     {
        case Qt::DisplayRole:
@@ -260,19 +296,48 @@ QVariant plotModel::data(const QModelIndex &index, int role) const
              auto iter = plotData[currModel].begin();
              advance(iter,row);
              plotRec value = *iter;
-             if (col == PLOT_PLOT)  // use index # to pick item in combobox
+             if (col == PLOT_CELL_FIB)
              {
-                int index = value.rec[PLOT_PLOT].toInt();
-                if ((*iter).popType == BURSTER_CELL)
-                   ret = bursterCombo[index];
-                else if ((*iter).popType == LUNG_CELL)
+                if (value.rec[col] == STD_CELL)
+                   ret = "CELL";
+                else if (value.rec[col] == STD_FIBER)
                 {
-                   int idx = -(index+1);
-                   ret = lungCombo[idx];
+                   if ((*iter).popType == STD_FIBER)
+                      ret = "FIBER";
+                   else
+                      ret = "AFF FIBER";
                 }
-                else
+                else if (value.rec[col] == LUNG_CELL)
+                   ret = "LUNG";
+             }
+             else if (col == PLOT_TYPE)  // use index # to pick item in combobox
+             {
+                int index = value.rec[PLOT_TYPE].toInt();
+                switch ((*iter).popType)
                 {
-                   ret = stdCombo[index];
+                   case BURSTER_CELL:
+                      ret = bursterCombo[index];
+                      break;
+                   case LUNG_CELL:
+                      idx = -(index+1);
+                      ret = lungCombo[idx];
+                      break;
+                   case STD_CELL:
+                   case PSR_CELL:
+                      ret = stdCombo[index];
+                      break;
+                   case STD_FIBER:
+                      ret = fiberPlotType;
+                      break;
+                   case AFFERENT_EVENT:
+                      if (index > AFFERENT_EVENT || index < AFFERENT_BIN)
+                         index = AFFERENT_EVENT;
+                      ret = afferentCombo[-(index-AFFERENT_EVENT)];
+                      break;
+                   default:
+                      cout << "Unexpected case #1 in plot table" << endl;
+                      ret = stdCombo[index];
+                      break;
                 }
              }
              else
@@ -283,10 +348,12 @@ QVariant plotModel::data(const QModelIndex &index, int role) const
        case Qt::TextAlignmentRole:
           switch(col)
           {
-             case PLOT_PLOT:
+             case PLOT_CELL_FIB:
                 ret = Qt::AlignLeft + Qt::AlignVCenter;
                 break;
-
+             case PLOT_TYPE:
+                ret = Qt::AlignLeft + Qt::AlignVCenter;
+                break;
              case PLOT_BINWID:
              case PLOT_POP:
              case PLOT_SCALE:
@@ -300,7 +367,7 @@ QVariant plotModel::data(const QModelIndex &index, int role) const
        case Qt::ToolTipRole:
           switch (col)
           {
-             case PLOT_PLOT:
+             case PLOT_TYPE:
                 ret = QString("Select the first four entries\nor select the fifth entry to use\nthe bin width and scale values. This is the activity for the entire population, not a single member.");
                 break;
              default:
@@ -324,20 +391,35 @@ bool plotModel::setData(const QModelIndex & index, const QVariant & value, int r
          auto iter = plotData[currModel].begin();
          advance(iter,row);
          QVariant newval;
-         if (col == PLOT_PLOT)  // use text to find index
+         if (col == PLOT_TYPE)  // use text to find index
          {
             int idx;
-            if ((*iter).popType == BURSTER_CELL)
-               newval = bursterCombo.indexOf(QRegExp(value.toString()));
-            else if ((*iter).popType == LUNG_CELL)
+            switch ((*iter).popType)
             {
-                    // 0 to 15 -> -1 to -16
-                idx = lungCombo.indexOf(QRegExp(value.toString()));
-                idx = -(idx+1);
-                newval = idx;
+               case STD_CELL:
+               case PSR_CELL:
+                  newval = stdCombo.indexOf(QRegExp(value.toString()));
+                  break;
+               case BURSTER_CELL:
+                  newval = bursterCombo.indexOf(QRegExp(value.toString()));
+                  break;
+               case LUNG_CELL:
+                  idx = lungCombo.indexOf(QRegExp(value.toString()));
+                  idx = -(idx+1);
+                  newval = idx;
+                  break;
+               case STD_FIBER:
+                  newval = STD_FIBER;
+                  break;
+               case AFFERENT_EVENT:
+                  idx = afferentCombo.indexOf(QRegExp(value.toString()));
+                  newval = -(-AFFERENT_EVENT + idx);
+                  break;
+               default:
+                  cout << "Unexpected case #2 in plot table" << endl;
+                  newval = stdCombo.indexOf(QRegExp(value.toString()));
+                  break;
             }
-            else if ((*iter).popType == STD_CELL)
-               newval = stdCombo.indexOf(QRegExp(value.toString()));
          }
          else
             newval = value;
@@ -361,7 +443,7 @@ Qt::ItemFlags plotModel::flags(const QModelIndex& index) const
    if (index.isValid())
    {
       flagval |= Qt::ItemIsDragEnabled;
-      if (index.column() != PLOT_POP)
+      if (index.column() != PLOT_POP && index.column() != PLOT_CELL_FIB)
          flagval |= Qt::ItemIsEditable;
    }
    else
@@ -379,20 +461,25 @@ void plotModel::updHeader(const QModelIndex& curr)
       plotRec rec = *iter;
       if ((*iter).popType == LUNG_CELL)
       {
-         colThree = "Offset/10000";
-         colFour  = "Scaling/10000";
+         colFour = "Offset/10000";
+         colFive  = "Scaling/10000";
       }
       else
       {
-         if (rec.rec[PLOT_PLOT] >= 4)
+         if (rec.rec[PLOT_TYPE] >= 4 || (rec.rec[PLOT_TYPE] == AFFERENT_BIN))
          {
-            colThree = "Bin Width (ms)";
-            colFour = "Bin Scaling";
+            colFour = "Bin Width (ms)";
+            colFive = "Scaling";
+         }
+         else if (rec.rec[PLOT_TYPE] == 3 || rec.rec[PLOT_TYPE] == AFFERENT_INST)
+         {
+            colFour = "";
+            colFive = "Scaling";
          }
          else
          {
-            colThree = "";
             colFour = "";
+            colFive = "";
          }
       }
    }
@@ -406,16 +493,18 @@ QVariant plotModel::headerData(int section,Qt::Orientation orientation, int role
       {
          switch (section)
          {
-            case 0:
+            case PLOT_CELL_FIB:
+               return QString("Type");
+            case PLOT_POP:
                return QString("Population");
-            case 1:
+            case PLOT_MEMB:
                return QString("Member");
-            case 2:
+            case PLOT_TYPE:
                return QString("Plot Variable");
-            case 3:
-               return colThree;
-            case 4:
+            case PLOT_BINWID:
                return colFour;
+            case PLOT_SCALE:
+               return colFive;
             default:
                return QString("");
          }
@@ -449,7 +538,7 @@ int bdtModel::rowCount(const QModelIndex & /*parent*/) const
 
 int bdtModel::columnCount(const QModelIndex & /*parent*/) const
 {
-    return BDT_NUM_COL;
+    return BDT_VISABLE_NUM_COL;
 }
 
 void bdtModel::dupModel(int from, int to)
@@ -482,7 +571,7 @@ void bdtModel::addRow(bdtRec& row_data, int row)
       advance(iter, row);
    }
 
-   if (row_data.rec[BDT_MEMB] == "0")  // will be 0 if already have a member #
+   if (row_data.rec[BDT_MEMB] == "0")  // "0" means create random member
    {
       // first, see if we have already used up all of the cell number range
       bdtRowIter dup_chk;
@@ -492,9 +581,9 @@ void bdtModel::addRow(bdtRec& row_data, int row)
          if ((*dup_chk).rec[BDT_CELL_FIB].toInt() == row_data.rec[BDT_CELL_FIB]
                && (*dup_chk).rec[BDT_POP].toInt() == row_data.rec[BDT_POP])
             ++pop_used;
+         if (pop_used == row_data.maxRndVal)
+            return; // have used up all of the unique pop nums for this pop, ignore the add
       }
-      if (pop_used == row_data.maxRndVal)
-         return; // we have used up all of the unique pop nums for this pop, ignore the add
 
       int rand_memb; // ensure no random dups
       bool found = false, try_again;
@@ -574,6 +663,26 @@ bool bdtModel::readRec(bdtRec& bRec, int row)
       advance(iter, row);
       bRec = *iter;
       found = true;
+   }
+   return found;
+}
+
+// access to underlying data struct
+bool bdtModel::updateRec(bdtRec& bRec, int row)
+{
+   bool found = false;
+   int size = bdtData[currModel].size();
+   if (row >= 0 && row < size)
+   {
+      bdtRowIter iter;
+      iter = bdtData[currModel].begin();
+      advance(iter, row);
+      *iter = bRec;
+      found = true;
+      emit notifyChg(true);
+      QModelIndex idxl = createIndex(row,BDT_MEMB,this);
+      QModelIndex idxr = createIndex(row,BDT_TYPE,this);
+      dataChanged(idxl,idxr);
    }
    return found;
 }
@@ -803,11 +912,11 @@ QVariant bdtModel::headerData(int section,Qt::Orientation orientation, int role)
       {
          switch (section)
          {
-            case 0:
+            case BDT_CELL_FIB:
                return QString("Type");
-            case 1:
+            case BDT_POP:
                return QString("Population");
-            case 2:
+            case BDT_MEMB:
                return QString("Member");
          }
       }
@@ -830,21 +939,30 @@ plotCombo::~plotCombo()
 
 QWidget* plotCombo::createEditor(QWidget *parent, const QStyleOptionViewItem & /*option*/, const QModelIndex & index) const
 {
-    QComboBox* editor = new QComboBox(parent);
-    editor->setFrame(true);
-    int row = index.row();
-
-    const plotModel* model = dynamic_cast<const plotModel*>(index.model());
-    auto iter = model->plotData[model->currModel].begin();
-    advance(iter,row);
-    int cell_type = (*iter).popType;
-    if (cell_type == BURSTER_CELL)
-       editor->addItems(bursterCombo);
-    else if (cell_type == LUNG_CELL)
-       editor->addItems(lungCombo);
-    else
-       editor->addItems(stdCombo);
-    return editor;
+   int row = index.row();
+   const plotModel* model = dynamic_cast<const plotModel*>(index.model());
+   auto iter = model->plotData[model->currModel].begin();
+   advance(iter,row);
+   int cell_type = (*iter).popType;
+   if (cell_type == STD_FIBER)
+   {
+      QLabel* editor = new QLabel(parent);  // this gets r/o text
+      return editor;
+   }
+   else // all other cases get a combo box
+   {
+      QComboBox* editor = new QComboBox(parent);
+      editor->setFrame(true);
+      if (cell_type == BURSTER_CELL)
+         editor->addItems(bursterCombo);
+      else if (cell_type == LUNG_CELL)
+         editor->addItems(lungCombo);
+      else if (cell_type == AFFERENT_EVENT)
+         editor->addItems(afferentCombo);
+      else
+         editor->addItems(stdCombo);
+      return editor;
+   }
 }
 
 void plotCombo::setEditorData(QWidget *editor, const QModelIndex &index) const
@@ -853,14 +971,21 @@ void plotCombo::setEditorData(QWidget *editor, const QModelIndex &index) const
     auto iter = model->plotData[model->currModel].begin();
     int row = index.row();
     advance(iter,row);
-    int value = (*iter).rec[PLOT_PLOT].toInt();
-    if (value < 4 && value >= 0)
+    int value = (*iter).rec[PLOT_TYPE].toInt();
+    if (value == AFFERENT_INST)
+    {
+       (*iter).rec[PLOT_BINWID] = "";
+    }
+    else if (value != AFFERENT_BIN && value >= 0 && value < 4)
     {
        (*iter).rec[PLOT_BINWID] = "";
        (*iter).rec[PLOT_SCALE] = "";
     }
+
     if ((*iter).popType == LUNG_CELL)
       value = -(value+1);
+    if ((*iter).popType == AFFERENT_EVENT)
+      value = -(value-AFFERENT_EVENT);
 
     QComboBox *combo = dynamic_cast<QComboBox*>(editor);
     if (combo)
@@ -901,8 +1026,8 @@ QWidget* plotSpin::createEditor(QWidget *parent, const QStyleOptionViewItem & /*
     int row = index.row();
     int col = index.column();
     advance(iter,row);
-    int value = (*iter).rec[PLOT_PLOT].toInt();
-    if (value >= 4) // bin width and scale
+    int value = (*iter).rec[PLOT_TYPE].toInt();
+    if (value >= 4 || value == AFFERENT_BIN) // bin width and scale
     {
        QSpinBox* editor = new QSpinBox(parent);
        editor->setFrame(true);
@@ -919,7 +1044,19 @@ QWidget* plotSpin::createEditor(QWidget *parent, const QStyleOptionViewItem & /*
        }
        return editor;
     }
-    else if (value < 0) // lung model, no obvious limits to this in newsned code
+    else if (value == 3 || value == AFFERENT_INST) // scale
+    {
+       if (col == PLOT_SCALE)
+       {
+          QSpinBox* editor = new QSpinBox(parent);
+          editor->setFrame(true);
+          editor->setAlignment(Qt::AlignRight);
+          editor->setMinimum(1);
+          editor->setMaximum(10000);
+          return editor;
+       }
+    }
+    else if (value < 0 && value > STD_FIBER) // lung model, no obvious limits to this in newsned code
     {
        QSpinBox* editor = new QSpinBox(parent);
        editor->setFrame(true);
@@ -928,8 +1065,8 @@ QWidget* plotSpin::createEditor(QWidget *parent, const QStyleOptionViewItem & /*
        editor->setMaximum( 1000000);
        return editor;
     }
-    else
-       return nullptr;
+
+    return nullptr; // rest of types have no info in these columns
 }
 
 void plotSpin::setEditorData(QWidget *editor, const QModelIndex &index) const

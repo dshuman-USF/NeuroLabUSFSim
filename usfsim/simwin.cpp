@@ -16,15 +16,22 @@ This file is part of the USF Neural Simulator suite.
     along with the suite.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include <unistd.h>
+#include <iostream>
 #if defined WIN32
 #include <libloaderapi.h>
 #endif
 #include "simwin.h"
 #include "ui_simwin.h"
+#include "QScrollArea"
+#include "QScrollBar"
+
+using namespace std;
+
 
 SimWin::SimWin(QWidget *parent) : QMainWindow(parent), ui(new Ui::SimWin)
 {
    ui->setupUi(this);
+
    QString title("SimBuild Version: ");
    title = title.append(VERSION);
    setWindowTitle(title);
@@ -412,6 +419,11 @@ void SimWin::dobuildAddPost()
    scene->addSynPost();
 }
 
+void SimWin::dobuildAddLearn()
+{
+   scene->addSynLearn();
+}
+
 void SimWin::on_buildDel_clicked()
 {
    scene->delSynType();
@@ -520,8 +532,10 @@ void SimWin::timeToQuit() // We never come back from this
       saveSnd();
    saveSettings();
    if (launch)
+   {
       launch->reParent(true); // so it will close when main win does
-   close();
+      launch->close();
+   }
 }
 
 
@@ -709,6 +723,11 @@ void SimWin::on_fiberElectricStopTime_valueChanged(const QString &/*arg1*/)
    fiberChanged();
 }
 
+void SimWin::on_fiberAfferent_clicked(bool checked)
+{
+   doFiberAfferent(checked);
+}
+
 void SimWin::on_actionLaunch_Window_Always_On_Top_toggled(bool arg1)
 {
    doLaunchOnTop(arg1);
@@ -795,4 +814,60 @@ void SimWin::on_actionSave_Model_as_PDF_triggered()
 void SimWin::on_actionDisplay_Model_as_Monochrome_triggered(bool checked)
 {
   doMonochrome(checked);
+}
+
+void SimWin::on_fiberSendLaunchPlot_clicked()
+{
+    fiberSendToLauncherPlot();
+}
+
+void SimWin::on_afferentFileButton_clicked()
+{
+   selAfferentFile();
+}
+
+
+void SimWin::on_fiberAfferentStartFire_valueChanged(const QString &/*arg1*/)
+{
+   fiberChanged();
+}
+
+void SimWin::on_fiberAfferentNumPop_valueChanged(const QString &/*arg1*/)
+{
+   fiberChanged();
+}
+
+void SimWin::on_fiberAfferentStopFire_valueChanged(const QString &/*arg1*/)
+{
+   fiberChanged();
+}
+
+void SimWin::on_afferentFileName_textEdited(const QString &/*arg1*/)
+{
+   fiberChanged();
+}
+
+void SimWin::on_addAfferentRow_clicked()
+{
+    addAfferentRow();
+}
+
+void SimWin::on_delAfferentRow_clicked()
+{
+   delAfferentRow();
+}
+
+void SimWin::on_fiberAffSeed_valueChanged(int /*arg1*/)
+{
+   fiberChanged();
+}
+
+void SimWin::on_fiberAfferentOffset_valueChanged(int /*arg1*/)
+{
+   fiberChanged();
+}
+
+void SimWin::on_buildAddLearn_clicked()
+{
+   dobuildAddLearn();
 }

@@ -48,14 +48,18 @@ const int SYN_NAME=1;      // text name
 const int SYN_TYPE=2;      // normal,pre,post
 const int SYN_EQPOT=3;
 const int SYN_TC=4;
-const int SYN_PARENT=5;
+const int SYN_LRN_WINDOW=5;
+const int SYN_LRN_DELTA=6;
+const int SYN_LRN_MAX=7;
+const int SYN_PARENT=8;
 const int SYN_NUM_COL=SYN_PARENT+1;
 
 const QStringList synTypeNames(
       {
         "Normal",
         "Presynaptic",
-        "Postsynaptic"
+        "Postsynaptic",
+        "Learning"
        });
 
 
@@ -80,8 +84,17 @@ class synDoubleSpin : public QDoubleSpinBox
       QLineEdit* getLe(){return lineEdit();};
 };
 
+class synIntegerSpin : public QSpinBox
+{
+   Q_OBJECT
+   public:
+      synIntegerSpin(QWidget *parent = 0);
+      virtual ~synIntegerSpin();
+      int old = std::numeric_limits<int>::quiet_NaN();
+      QLineEdit* getLe(){return lineEdit();};
+};
 
-// custom class for a spinbox in a cell
+// custom class for a spinbox in a cell for double precision
 class synSpin : public QStyledItemDelegate
 {
    Q_OBJECT
@@ -90,6 +103,7 @@ class synSpin : public QStyledItemDelegate
       virtual ~synSpin();
 
    private slots:
+     void synSpinValueChg(double);
 
    protected:
       QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
@@ -106,6 +120,30 @@ class synSpin : public QStyledItemDelegate
       int decimals=4;
 };
 
+// custom class for a spinbox in a cell for ints
+class synIntSpin : public QStyledItemDelegate
+{
+   Q_OBJECT
+   public:
+      synIntSpin(QObject *parent = 0, int min = -2000, int max = 2000);
+      virtual ~synIntSpin();
+
+   private slots:
+     void synIntValueChg(int);
+
+   protected:
+      QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                            const QModelIndex &index) const override;
+      void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+      void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const override;
+      void updateEditorGeometry(QWidget *editor,
+     const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+     QString displayText(const QVariant &, const QLocale &) const override;
+
+   private:
+      int spinMin;
+      int spinMax;
+};
 
 #if 0
 // custom class for a combo in a cell
@@ -189,6 +227,7 @@ class synModel : public QAbstractItemModel
    Q_OBJECT
    friend synEdit;
    friend synSpin;
+   friend synIntSpin;
 
    public:
       synModel(QObject *parent);

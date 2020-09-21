@@ -22,14 +22,16 @@ This file is part of the USF Neural Simulator suite.
 #include <math.h>
 #include "simulator.h"
 #include "inode.h"
+#include "simrun_wrap.h"
 
 #define BOUNDS(idx, count) ((idx) >= 0 && (idx) < (count)) || DIE
 #if 0
+// hard to breakpoing macros, use function for debugging
 void BOUNDS(int idx, int count)
 {
    if (idx >= 0 && idx < count)
    {
-      fprintf(stderr,"Bounds check fail idx: %d count: %d\n",idx,count);
+      fprintf(stdout,"Bounds check fail idx: %d count: %d\n",idx,count);
       DIE;
    }
 }
@@ -43,43 +45,8 @@ typedef struct
   int maxqidx;
 } SynInfo;
 
-
-/* The synapse variable is a 3D dynamically allocated set of arrays 
-   It is used used like so:
-   synapse[cellpop][cell][SynInfo].
-
-   slots are like this:
-   First index: synapse[pop], array size is # of cell pops, each slot holds a pointer to:
-    Second Index: synapse[0][cells], cells is an array of pointers for each cell in pop:
-
-   synapse[0]-> [ptr, ptr, ptr, . . .  ]
-
-   synapse[1]-> [ptr, ptr, ptr, . . .  ]
-     These point to:
-
-     Third index, an array of pointers to a SynInfo struct, one
-     for each cell synapse target.
-
-   So, something like this:
-
-   synapse [0][0][0]   cell pop 0, cell 0, SynInfo 0
-   synapse [0][0][1]                       SynInfo 1
-   synapse [0][1][0]               cell 1, SynInfo 0
-   synapse [0][1][1]                       SynInfo 1
-   synapse [0][1][2]               cell 1, SynInfo 2
-
-   synapse [1][0][0]   cell pop 1, cell 0, SynInfo 0
-    . . .
-
-   There is a parallel set of arrays in the global S array that was 
-   read in from the .sim file.
-   S.net.cellpop holds an array of pointers, one per cell pop.
-   Each one of these points to a Cell struct
-   Fibers and synapses are handled similarly.
-*/
-
-
-static SynInfo ***synapse;
+static SynInfo ***synapse; // see lengthy comment at end of file with some
+                           // clues about how this is used.
 
 double
 ran (int *i)
@@ -109,22 +76,23 @@ for_terminals (int iseed, Target *target, int target_count, TargetPop *tp, int t
     CellPop *tcp = S.net.cellpop + tcpidx;
       // tcidx is rand #0-1 * number of cells
     int tcidx = (int)(ran(&iseed) * tcp->cell_count);
-      // quidx is min cond time + random #0-1 * (cond time - min cond time)
+printf("target %d  attched to cell pop %d terminal %d\n",tidx, tp->IRCP, tcidx);
+     // quidx is min cond time + random #0-1 * (cond time - min cond time)
     //int qidx = tp->MCT + (int)(ran(&iseed) * (tp->NCT - tp->MCT));
-   double r0 = ran(&iseed);
-    //int qidx = tp->MCT + (int)(ran(&iseed) * (tp->NCT - tp->MCT));
+    double r0 = ran(&iseed);
+     // this is how to original code did this. Why calculate qidx
+     // then do it again with a different random number?
     int qidx = tp->MCT + (int)(r0 * (tp->NCT - tp->MCT));
     if(Debug)
     {
        printf("seed:%d rand: %lf  NCT: %d MCT: %d\n",iseed,r0,tp->NCT, tp->MCT);
        printf("qidx#1: %d\n",qidx);
     }
-
-      // if number of terminals is cond time-min cond time
+      // if number of terminals == max cond time - min cond time
     if (tp->NT == tp->NCT - tp->MCT)
       qidx = tp->MCT + tidx;     // qidx is min time plus current terminal index
     else
-        // or qidx is same as # calculated above
+        // else repeat the calculation above (huh?)
       qidx = tp->MCT + (int)(ran(&iseed) * (tp->NCT - tp->MCT));
 
    // qidx seems to be determined by how long the max-min conductance time is
@@ -132,16 +100,26 @@ for_terminals (int iseed, Target *target, int target_count, TargetPop *tp, int t
      if(Debug) printf("qidx#2: %d\n",qidx);
      if(Debug) fflush(stdout);
 
+     // check for errors and exit program if there are any
 if ( tcpidx < 0 || tcpidx >= S.net.cellpop_count)
-{   fprintf (stderr, "bounds1: tidx0 %d, tp->NT %d, tidx %d, target_count %d cellpopcount %d \n", tidx0, tp->NT, tidx, target_count,S.net.cellpop_count); fflush(stderr);}
+{   fprintf (stdout, "bounds1: tidx0 %d, tp->NT %d, tidx %d, target_count %d cellpopcount %d \n", tidx0, tp->NT, tidx, target_count,S.net.cellpop_count); fflush(stdout);}
     BOUNDS (tcpidx, S.net.cellpop_count);
 if ( (tidx0+tidx) < 0 || tidx0+tidx >= target_count )
-{   fprintf (stderr, "bounds2: tidx0 %d, tp->NT %d, tidx %d, target_count %d cellpopcount %d \n", tidx0, tp->NT, tidx, target_count,S.net.cellpop_count); fflush(stderr);}
+{   fprintf (stdout, "bounds2: tidx0 %d, tp->NT %d, tidx %d, target_count %d cellpopcount %d \n", tidx0, tp->NT, tidx, target_count,S.net.cellpop_count); fflush(stdout);}
     BOUNDS (tidx0 + tidx, target_count);
     func (tp, tcp, target + tidx0 + tidx, tcpidx, tcidx, qidx);
   }
 }
 
+// This sets up the glue between sender and receiver terminals.
+// This shares a pointer and other values between each sender and receiver.
+// The sender writes potentials to the q array with an optional delay factor
+// The receiver reads behind the sender and uses the value to increase or
+// decrease potentials (excit,inhib), perhaps to cause a firing event. 
+
+//** This is where the shared learning info should be kept. This is the 
+//** common area where senders store firing history and where receivers
+//** decide if the sender strength should be modified.
 static inline void
 attach_to_synapses (TargetPop *tp, CellPop *tcp, Target* t, int tcpidx, int tcidx, int qidx)
 {
@@ -152,10 +130,12 @@ attach_to_synapses (TargetPop *tp, CellPop *tcp, Target* t, int tcpidx, int tcid
   t->delay = qidx;
   t->strength = tp->STR;
   t->disabled = 0;
+  t->syn->initial_strength = tp->STR;
+  t->syn->lrn_strength = tp->STR;
+
 
 //  if(Debug) printf("attach syn ptr %p to synapse[%d][%d][%d]  vals: delay (qidx):%d str:%f disabled:%d\n", t->syn, tcpidx,tcidx,tp->TYPE-1, t->delay, t->strength, t->disabled);
   if(Debug) printf("attach synapse[%d][%d][%d]  vals: delay (qidx):%d str:%f disabled:%d\n", tcpidx,tcidx,tp->TYPE-1, t->delay, t->strength, t->disabled);
-
 }
 
 // Update the synapse[pop][cell][synapse slot] 
@@ -390,6 +370,7 @@ build_network ()
       c->Thr = cp->Th0 + ran_gaussian (0) * cp->Th0_sd;
       c->target_count = target_count;
       if (Debug) printf("allocate array of ptrs in S.net.cellpop.target+%d for %d targets\n",cpidx,c->target_count);
+        // this allocates an array of *Target ptrs for each terminal
       TMALLOC (c->target, c->target_count);
     }
   }
@@ -410,12 +391,15 @@ build_network ()
     {
        fp->next_stim = fp->start;
        fp->next_fixed = fp->start;
-       printf("step: %f first stim at %d  %d\n",
+       {if(Debug)printf("step: %f first stim at %d  %d\n",
              S.step, 
              fp->start,
-             fp->next_stim);
+             fp->next_stim);}
+    } 
+    else if (fp->pop_subtype == AFFERENT) 
+    {
+       openExternalSource(fp);
     }
-
     for (tpidx = 0; tpidx < fp->targetpop_count; tpidx++)
       target_count += fp->targetpop[tpidx].NT;
 
@@ -447,6 +431,8 @@ build_network ()
       int stidx;
       Syn *syn;
       {if(Debug) printf("\nallocate %d slots in Syn array\n",c->syn_count);}
+      // this allocates an array pointed to by synapse[pop][cell][c_syn_count].ptr
+      // for the 
       TCALLOC (c->syn, c->syn_count);
       syn = c->syn;
       for (stidx = 0; stidx < S.net.syntype_count; stidx++) 
@@ -454,7 +440,7 @@ build_network ()
         {if (Debug) printf("syn type array idx (stidx): %d\n",stidx);}
         SynType *stp = S.net.syntype + stidx;
         BOUNDS (cidx, S.net.cellpop[cpidx].cell_count);
-        if (synapse[cpidx][cidx][stidx].ptr != 0) 
+        if (synapse[cpidx][cidx][stidx].ptr != 0) // is in use by the model 
         {
           {if(Debug) printf("Cell pop %d cell %d\n",cpidx,cidx);}
 
@@ -462,6 +448,9 @@ build_network ()
           BOUNDS (syn - c->syn, c->syn_count);
           syn->EQ = stp->EQ;
           syn->DCS = stp->DCS;
+          syn->lrnWindow = stp->lrnWindow;
+          syn->lrnStrMax = stp->lrnStrMax;
+          syn->lrnStrDelta = stp->lrnStrDelta;
           syn->q_count = synapse[cpidx][cidx][stidx].maxqidx + 1;
           syn->cpidx = cpidx;
           syn->cidx = cidx;
@@ -481,8 +470,8 @@ build_network ()
 
           TCALLOC (syn->q, syn->q_count);
           if (stp->SYN_TYPE == SYN_NOT_USED) // a bug
-            fprintf(stderr,"Unexpected unused synapse in list\n");
-          if (S.ispresynaptic && stp->SYN_TYPE != SYN_NORM)
+            fprintf(stdout,"Unexpected unused synapse in list\n");
+          if (S.ispresynaptic && (stp->SYN_TYPE == SYN_PRE || stp->SYN_TYPE == SYN_POST))
           {
             if (stp->SYN_TYPE == SYN_PRE)
             {
@@ -498,6 +487,16 @@ build_network ()
               if (Debug) printf(" syn[%d] = 1\n",n);
             }
           }
+          if (stp->SYN_TYPE == SYN_LEARN)
+          {
+             {if (Debug) printf("add ptr to learn array of %d slots\n",LRN_SIZE);}
+             TCALLOC (syn->lrn, LRN_SIZE);
+             LEARN *lrn = syn->lrn;
+             syn->lrn_size = LRN_SIZE;
+             for (int lrs = 0; lrs < LRN_SIZE; ++lrs,++lrn)
+                lrn->recv_pop = LRN_FREE;  // mark as unused slot
+          }
+
           synapse[cpidx][cidx][stidx].ptr = syn++;
         }
       }
@@ -511,3 +510,112 @@ build_network ()
   for_fiber_targets (attach_to_synapses);
   check_synapses ();
 }
+
+
+/* The synapse variable is a 3D dynamically allocated set of arrays 
+   It is used used like so:
+   synapse[cellpop][cell][SynInfo].
+
+   slots are like this:
+   First index: synapse[pop], array size is # of cell pops, each slot holds a pointer to:
+    Second Index: synapse[0][cells], cells is an array of pointers for each cell in pop:
+
+   synapse[0]-> [ptr, ptr, ptr, . . .  ]
+
+   synapse[1]-> [ptr, ptr, ptr, . . .  ]
+     These point to:
+
+     Third index, an array of pointers to a SynInfo struct, one
+     for each cell synapse target.
+
+   So, something like this:
+
+   synapse [0][0][0]   cell pop 0, cell 0, SynInfo 0
+   synapse [0][0][1]                       SynInfo 1
+   synapse [0][1][0]               cell 1, SynInfo 0
+   synapse [0][1][1]                       SynInfo 1
+   synapse [0][1][2]               cell 1, SynInfo 2
+
+   synapse [1][0][0]   cell pop 1, cell 0, SynInfo 0
+    . . .
+
+   There is a parallel set of arrays in the global S array that was 
+   read in from the .sim file.
+   S.net.cellpop holds an array of pointers, one per cell pop.
+   Each one of these points to a Cell struct
+   Fibers and synapses are handled similarly.
+
+   Q and Q_COUNT
+   It took me a while to figure out how the q and q_count vars were used.
+   In the original Fortran code, the G array was a 4D array, and the last item
+   was a fixed size array that was the synapse delay array.  The port to C put
+   the array inside the synapse  struct in the q array.  The max conduction
+   time determines the size of the array.  The minimum conduction time
+   determines how much of the array will be used.
+   So, if the min is 3 and the max is 8, we have something like this:
+      q[0]  q[1]  q[2]  q[3]  q[4]  q[5]  q[6]  q[7]
+      [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ]
+
+   A variable, the delay, is set to a random number 0-7. This is in effect
+   the "origin" of each q array. In effect, the starting point of the delay
+   varies for each synapse terminal.
+   The slots hold 0 by default.
+   When a fiber or cell fires, an index (step number + delay) % size
+   determines the index. So, for step 12 with a delay of 3 and synapse
+   strength of 0.1, (12+3)%8 = 7, 0.1 is added to q[7].
+      q[0]  q[1]  q[2]  q[3]  q[4]  q[5]  q[6]  q[7]
+      [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [0.1]
+   If the next terminal has a delay of 5, (12+5)&8 = 1
+   so 0.1 is added to q[1]
+
+      [ 0 ] [0.1] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ] [ 0 ]
+
+   When the target cell state vars are updated, the cell calculates the index
+   as step num & size. In this case, 12 % 8 = 4, which is zero. This has the
+   effect a delay. In the next steps, 13 % 8 = 5, which is zero, 14 % 8 = 6, 15
+   % 8 = 7 which is 0.1. This is "used" in calculating the potential, then
+   zeroed.  In effect, the firing is finally "seen" for that terminal after a
+   delay of 3 steps.  Note the delay can be longer, delay will be between the
+   min and max depending on the delay value.
+
+   Here is a printout of a run using a fiber pop of 1 connected to a cell pop of 1
+   using a synapse min = 3, max = 8, 4 terminals, strength = 0.1
+
+   step: 51
+   Fiber fire
+     Fiber: delay: 3 index: 7 val: 0.10
+     Fiber: delay: 7 index: 3 val: 0.10
+     Fiber: delay: 5 index: 1 val: 0.10
+     Fiber: delay: 6 index: 2 val: 0.10
+   step: 52  Cell Delay slot 4
+   step: 53  Cell Delay slot 5
+   step: 54  Cell Delay slot 6
+   step: 55 Cell Using slot 7 0.10
+   step: 56  Cell Delay slot 0
+   step: 57 Cell Using slot 1 0.10
+   step: 58 Cell Using slot 2 0.10
+   step: 59 Cell Using slot 3 0.10
+   step: 60  Cell Delay slot 4
+   step: 61  Cell Delay slot 5
+   step: 62  Cell Delay slot 6
+   Fiber fire
+     Fiber: delay: 3 index: 2 val: 0.10
+     Fiber: delay: 7 index: 6 val: 0.10
+     Fiber: delay: 5 index: 4 val: 0.10
+     Fiber: delay: 6 index: 5 val: 0.10
+   step: 63  Cell Delay slot 7
+   step: 64  Cell Delay slot 0
+   step: 65  Cell Delay slot 1
+   step: 66 Cell Using slot 2 0.10
+   step: 67  Cell Delay slot 3
+   step: 68 Cell Using slot 4 0.10
+   step: 69 Cell Using slot 5 0.10
+   step: 70 Cell Using slot 6 0.10
+   step: 71  Cell Delay slot 7
+   step: 72  Cell Delay slot 0
+   step: 73  Cell Delay slot 1
+   step: 74  Cell Delay slot 2
+   step: 75  Cell Delay slot 3
+   step: 76  Cell Delay slot 4
+   step: 77  Cell Delay slot 5
+*/

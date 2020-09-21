@@ -1,7 +1,7 @@
 Source: usfsim
 Section: local
 Priority: extra
-Maintainer: Dale Shuman <dshuman@health.usf.edu>
+Maintainer: Dale Shuman <dshuman@usf.edu>
 Build-Depends: debhelper (>= 8.0.0), autotools-dev,
  locales,
  libdpkg-perl,

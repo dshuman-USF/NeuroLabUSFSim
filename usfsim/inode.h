@@ -60,6 +60,7 @@ This file is part of the USF Neural Simulator suite.
 #endif
 
 #include "util.h"
+#include "common_def.h"
 
 /*    Symbolic network Editor Structural declaration header file     */
 
@@ -82,7 +83,8 @@ This file is part of the USF Neural Simulator suite.
 #define LUMBAR_POP    10 
 #define INSP_LAR_POP  11
 #define EXP_LAR_POP   12
-#define ELECTRIC_STIM 13
+#define ELECTRIC_STIM 13    /* a type of fiber pop */
+#define AFFERENT      14    /* another type of fiber pop */
 #define SUBSYSTEM    100    /* global type of partial/subsets of a model */
 
 #define MAX_NODE_TYPES 50 /* Somewhat arbitrary, but replaces some magic #'s */
@@ -101,6 +103,7 @@ This file is part of the USF Neural Simulator suite.
 #define SYN_NORM 1
 #define SYN_PRE 2
 #define SYN_POST 3
+#define SYN_LEARN 4
 
 /* type of electric stim */
 #define STIM_FIXED 1 
@@ -160,6 +163,12 @@ typedef struct  {        /*  This TYPE is the Fiber node sub-data structure  */
    int freq_type;     /* electric stim subtype params fixed or fuzzy */
    float frequency;   /* how often to fire stim (Hz) */
    float fuzzy_range; /* if fuzzy, width of range to randomly vary stim fire (ms) */
+   char afferent_prog[1024];//string
+   char afferent_file[1024];//string
+   int num_aff;
+   int offset;
+   double aff_val[MAX_AFFERENT_PROB];
+   double aff_prob[MAX_AFFERENT_PROB];
 } F_NODE;
 
 
@@ -213,6 +222,12 @@ typedef struct  {                       /* create the synapse definition node*/
    /* synapse type, new for simbuild, unused=0 normal=1, pre=2, post=3 */
    int parent[TABLE_LEN];
    /* what norm synapse is associated with pre/post/maybe other types? */
+   // # ticks previous firings are remembered
+   int  lrn_window[TABLE_LEN];   
+   // maximum strength value
+   double lrn_maxstr[TABLE_LEN];
+   // increase/decrease factor
+   double lrn_delta[TABLE_LEN];
 } S_NODE;
 
 #include "old_inode.h"

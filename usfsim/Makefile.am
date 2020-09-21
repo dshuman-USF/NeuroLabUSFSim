@@ -1,17 +1,17 @@
 #(Copyright 2005-2020 Kendall F. Morris
 #
 # This file is part of the USF Neural Simulator suite.
-# 
+#
 #     The Neural Simulator suite is free software: you can redistribute
 #     it and/or modify it under the terms of the GNU General Public
 #     License as published by the Free Software Foundation, either
 #     version 3 of the License, or (at your option) any later version.
-# 
+#
 #     The suite is distributed in the hope that it will be useful,
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details.
-# 
+#
 #     You should have received a copy of the GNU General Public License
 #     along with the suite.  If not, see <https://www.gnu.org/licenses/>.
 #
@@ -25,8 +25,8 @@ simspectrum_LDADD = -lm -lfftw3f
 simspectrum_LDFLAGS = $(FFTWLIBDIR)
 simrun_LDADD = $(LDADD) -lmuparser -lson64 -lpthread
 
-#DEBUG_OR_NOT= -ggdb3
-DEBUG_OR_NOT= -O2
+DEBUG_OR_NOT= -ggdb3
+#DEBUG_OR_NOT= -O2
 
 #AM_CXXFLAGS = $(DEBUG_OR_NOT) -Wall -fPIC
 #AM_CXXFLAGS = $(DEBUG_OR_NOT) -Wall -std=c++17 -fPIC -Wno-unused-value -Wno-deprecated-copy -DVERSION=\"$(VERSION)\"
@@ -35,9 +35,13 @@ AM_CXXFLAGS = $(DEBUG_OR_NOT) -Wall -std=c++17 -fPIC -Wno-unused-value -Wno-unus
 AM_CPPFLAGS = $(DEBUG_OR_NOT) -DVERSION=\"$(VERSION)\"
 AM_CFLAGS = $(DEBUG_OR_NOT) -Wall --std=c11 -Wno-unused-value -Wno-unused-result
 
-bin_PROGRAMS = simbuild simrun simviewer simmsg edt2spike2 wave2daq wave2daq.exe \
-					simbuild.exe simrun.exe simviewer.exe simmsg.exe edt2spike2.exe \
-					simpickwave simpickedt simtxt2flt simmerge
+# build exe programs first.
+bin_PROGRAMS = simbuild.exe simrun.exe simviewer.exe simmsg.exe edt2spike2.exe \
+              makesine.exe wave2daq.exe \
+              simbuild simrun simviewer simmsg edt2spike2 wave2daq \
+              simpickwave simpickedt simtxt2flt simmerge makesine
+
+
 if COND_FFTW
   bin_PROGRAMS += simspectrum
 endif
@@ -50,13 +54,14 @@ simspectrum_SOURCES = simspectrum.c util.c
 simtxt2flt_SOURCES = simtxt2flt.c
 simmerge_SOURCES = simmerge.c
 
-BUILT_SOURCES = build_hash.c sim_hash.c
+BUILT_SOURCES = build_hash.c sim_hash.c inode_hash.h
 
 simrun_SOURCES = read_sim.c build_network.c simloop.c sim.c update.c \
 simulator.h fileio.c sim_hash.c util.c util.h \
 build_hash.c fileio.h hash.h simulator_hash.h \
 inode.h old_inode.h inode_2.h sample_cells.c sample_cells.h lung.c lung.h expr.cpp \
-lin2ms.c lin2ms.h expr.h wavemarkers.c wavemarkers.h simrun_wrap.cpp simrun_wrap.h
+lin2ms.c lin2ms.h expr.h wavemarkers.c wavemarkers.h simrun_wrap.cpp simrun_wrap.h \
+common_def.h
 simrun_exe_SOURCES = $(simrun_SOURCES) simrun.pro
 
 
@@ -64,14 +69,15 @@ simbuild_BUILT_SOURCES= ui_simwin.h ui_launchwindow.h moc_simwin.cpp moc_simscen
  moc_launchwindow.cpp moc_launch_model.cpp moc_simview.cpp \
  qrc_simbuild.cpp moc_helpbox.cpp ui_helpbox.h moc_selectaxonsyn.cpp \
  moc_sim_proc.cpp moc_build_model.cpp moc_synview.cpp ui_selectaxonsyn.h \
- moc_finddialog.cpp ui_finddialog.h
+ moc_affmodel.cpp moc_finddialog.cpp ui_finddialog.h
 
 BUILT_SOURCES += $(simbuild_BUILT_SOURCES)
 
 simbuild_code = simmain.cpp simwin.cpp sim_impl.cpp simview.cpp simview.h simscene.cpp \
  sim2build.cpp fileio.c swap.c swap.h util.c build_hash.c \
  sim_hash.c simwin.ui sim2build.h simscene_export.cpp simscene_draw.cpp \
- launchwindow.cpp launchwindow.ui simwin.h launchwindow.h launch_impl.cpp \
+ launchwindow.cpp launchwindow.ui simwin.h affmodel.cpp affmodel.h launchwindow.h \
+ launch_impl.cpp \
  launch_model.cpp launch_model.h simbuild.qrc simbuild.png c_globals.c c_globals.h \
  colormap.cpp colormap.h node_mgr.c helpbox.cpp helpbox.h helpbox.ui \
  simnodes.h simnodes.cpp selectaxonsyn.h selectaxonsyn.cpp selectaxonsyn.ui \
@@ -79,7 +85,8 @@ simbuild_code = simmain.cpp simwin.cpp sim_impl.cpp simview.cpp simview.h simsce
  chglog.cpp chglog.h build_syn.png cell_icon.png conn_icon.png simscene.h \
  delete_icon.png fiber_icon.png launch_icon.png quit_icon.png globals_icon.png \
  lin2ms.c lin2ms.h simbuild.ico import_icon.png export_icon.png \
- wavemarkers.c wavemarkers.h finddialog.cpp finddialog.h finddialog.ui
+ wavemarkers.c wavemarkers.h finddialog.cpp finddialog.h finddialog.ui \
+ common_def.h leftarrow.png rightarrow.png uparrow.png downarrow.png
 
 
 simbuild_SOURCES = $(simbuild_BUILT_SOURCES) $(simbuild_code)
@@ -105,19 +112,31 @@ BUILT_SOURCES += $(simmsg_BUILT_SOURCES)
 edt2spike2_SOURCES = edt2spike2.cpp
 edt2spike2_exe_SOURCES = $(edt2spike2_SOURCES) edt2spike2_win.pro
 
+makesine_SOURCES = makesine.cpp
+makesine_exe_SOURCES = $(makesine_SOURCES) makesine_win.pro
+
 wave2daq_SOURCES = wave2daq.cpp
 wave2daq_exe_SOURCES = $(wave2daq_SOURCES) wave2daq_win.pro
 
 BUILT_SOURCES += Makefile_simbuild.qt Makefile_simviewer.qt Makefile_simmsg.qt \
 					  Makefile_simrun.qt Makefile_simbuild_win.qt Makefile_simviewer_win.qt \
                  Makefile_simmsg_win.qt Makefile_simrun_win.qt Makefile_edt2spike2_win.qt \
-                 Makefile_wave2daq_win.qt
+                 Makefile_wave2daq_win.qt Makefile_makesine_win.qt
+
+if HAVE_WEB
+  BUILT_SOURCES += Makefile_simbuild_web514.qt Makefile_simviewer_web514.qt
+endif
+
 BUILT_SOURCES += simbuild_plugin_import.cpp simmsg_plugin_import.cpp \
 					  simviewer_plugin_import.cpp
 
 CLEANFILES = ${BUILT_SOURCES} \
-             $(MSWIN_DIR)/*.o \
-             $(WEBASM_DIR)/*.o
+             $(MSWIN_DIR)/*.o
+
+if HAVE_WEB
+ CLEANFILES +=$(WEBASM_DIR)/*.o
+endif
+
 
 EXTRA_DIST = gen_gperf.pl tag.pl inode_choose.c gen_hash.sh \
 sim.tex usfsim.tex paramgen.pdf references.bib debian \
@@ -129,17 +148,19 @@ dist_doc_DATA=sim.pdf usfsim.pdf COPYING LICENSE README README_FOR_WINDOWS \
 				  COPYRIGHTS ReleaseNotes.odt ReleaseNotes.pdf ChangeLog
 
 LINUX_FILES=simbuild.desktop simviewer.desktop example_model.snd example_model.ols \
-				ADDUCTOR-51.v6.snd ADDUCTOR-51.v6.ols
+				ADDUCTOR-51.v6.snd ADDUCTOR-51.v6.ols learn_demo.snd learn_demo.ols
 WIN_FILES=example_modelWIN.snd example_modelWIN.ols \
-				ADDUCTOR-51.v6.win.snd ADDUCTOR-51.v6.win.ols
+				ADDUCTOR-51.v6.win.snd ADDUCTOR-51.v6.win.ols \
+				learn_demoWIN.snd learn_demoWIN.ols
 LW_FILES=def_cell.sned def_fiber.sned def_syn.sned globals.sned \
 simbuild.png simviewer.png
 
 dist_pkgdata_DATA= $(LINUX_FILES) $(LW_FILES) $(WIN_FILES) usfsim_win_$(VERSION).zip
+
 checkin_pD=        $(LINUX_FILES) $(LW_FILES) $(WIN_FILES)
 
 WINDOWS_FILES=simbuild.exe simrun.exe simviewer.exe simmsg.exe edt2spike2.exe \
-				wave2daq.exe $(WIN_FILES) $(LW_FILES) $(dist_doc_DATA)
+				wave2daq.exe makesine.exe $(WIN_FILES) $(LW_FILES) $(dist_doc_DATA)
 
 zipit:
 	make usfsim_win_$(VERSION).zip
@@ -161,15 +182,20 @@ sim.pdf: sim.tex references.bib
 	latexmk -f -gg -pdf sim.tex
 
 sim_CPPFLAGS = $(DEBUG_OR_NOT) -I/usr/include/muParser
-#simbuild_CXXFLAGS = `pkg-config --cflags Qt5Gui Qt5Network Qt5Core Qt5Widgets ` -m64 -pipe -W -D_REENTRANT -fPIC ${DEFINES}
+
 simbuild_CXXFLAGS = $(AM_CXXFLAGS) `pkg-config --cflags Qt5Gui Qt5Network Qt5Core Qt5Widgets ` -m64 -pipe -W -D_REENTRANT -fPIC ${DEFINES}
 simbuild_LDFLAGS = `pkg-config --libs Qt5Gui Qt5Core Qt5Widgets Qt5Network  Qt5PrintSupport  `  -lpthread -Wl,--wrap=getline
 simviewer_CXXFLAGS = $(AM_CXXFLAGS) `pkg-config --cflags Qt5Gui Qt5Core Qt5Widgets Qt5PrintSupport` -m64 -pipe -W -D_REENTRANT -fPIC ${DEFINES}
 simviewer_LDFLAGS = `pkg-config --libs Qt5Gui Qt5Core Qt5Widgets Qt5PrintSupport  `  -lpthread -Wl,--wrap=getline
-simrun_CXXFLAGS = $(AM_CXXFLAGS) `pkg-config --cflags Qt5Gui Qt5Core Qt5Widgets ` -m64 -pipe -W -D_REENTRANT -fPIC -DS64_NOTDLL ${DEFINES}
-simrun_LDFLAGS = `pkg-config --libs Qt5Gui Qt5Core Qt5Widgets  ` -lpthread -Wl,--wrap=getline
+#simrun_CXXFLAGS = $(AM_CXXFLAGS) `pkg-config --cflags Qt5Gui Qt5Core Qt5Widgets ` -m64 -pipe -W -D_REENTRANT -fPIC -DS64_NOTDLL ${DEFINES}
+simrun_CXXFLAGS = $(AM_CXXFLAGS)  -m64 -pipe -W -D_REENTRANT -fPIC -DS64_NOTDLL ${DEFINES}
+#simrun_LDFLAGS = `pkg-config --libs Qt5Gui Qt5Core Qt5Widgets  ` -lpthread -Wl,--wrap=getline
+simrun_LDFLAGS =  -lpthread -Wl,--wrap=getline
 edt2spike2_CXXFLAGS = $(AM_CXXFLAGS) -pipe -W -D_REENTRANT -fPIC
 edt2spike2_LDADD = -lson64 -lpthread
+
+makesine_CXXFLAGS = $(AM_CXXFLAGS) -pipe -W -D_REENTRANT -fPIC
+makesine_LDADD = -lson64 -lpthread
 
 wave2daq_CXXFLAGS = $(AM_CXXFLAGS) -pipe -W -D_REENTRANT -fPIC
 
@@ -180,7 +206,9 @@ sim_hash.c: simulator.h gen_gperf.pl Makefile.am tag.pl gen_hash.sh simulator_CP
 	./gen_hash.sh simulator.h > sim_hash.c
 	test -s sim_hash.c || rm sim_hash.c
 
-build_hash.c: inode.h  gen_gperf.pl Makefile.am tag.pl gen_hash.sh inode_CPPFLAGS
+inode_hash.h: build_hash.c
+
+build_hash.c: inode.h  gen_gperf.pl Makefile.am tag.pl gen_hash.sh
 	./gen_hash.sh inode.h > build_hash.c
 	test -s build_hash.c || rm build_hash.c
 
@@ -189,9 +217,6 @@ simfiles: $(sim_SOURCES) Makefile.am
 
 simulator_CPPFLAGS: Makefile.am	#for use by gen_hash.sh
 	echo $(sim_CPPFLAGS) > simulator_CPPFLAGS
-
-inode_CPPFLAGS: Makefile.am	#for use by gen_hash.sh
-	echo $(newsned_CPPFLAGS) > inode_CPPFLAGS
 
 lin: $(BUILT_SOURCES)
 	make simbuild
@@ -250,8 +275,19 @@ edt2spike2.exe$(EXEEXT): mswin Makefile_edt2spike2_win.qt $(edt2spike2_exe_SOURC
 	@echo MXE environment not installed, windows program not built
  endif
 
+
 Makefile_edt2spike2_win.qt: edt2spike2_win.pro
 	x86_64-w64-mingw32.static-qmake-qt5 edt2spike2_win.pro -r -spec win32-g++ 'DEFINES+=VERSION=\\\"$(VERSION)\\\"'
+
+makesine.exe$(EXEEXT): mswin Makefile_makesine_win.qt $(makesine_exe_SOURCES)
+ ifdef MXE_QMAKE
+	make -f Makefile_makesine_win.qt
+ else
+	@echo MXE environment not installed, windows program not built
+ endif
+
+Makefile_makesine_win.qt: makesine_win.pro
+	x86_64-w64-mingw32.static-qmake-qt5 makesine_win.pro -r -spec win32-g++ 'DEFINES+=VERSION=\\\"$(VERSION)\\\"'
 
 wave2daq.exe$(EXEEXT): mswin Makefile_wave2daq_win.qt $(wave2daq_exe_SOURCES)
  ifdef MXE_QMAKE
@@ -266,12 +302,21 @@ Makefile_wave2daq_win.qt: wave2daq_win.pro
 Makefile_simbuild.qt: simbuild.pro Makefile.am configure.ac
 	qmake simbuild.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
 
-Makefile_simbuild_web_512.qt:
-	/home/opt2/qtbase-everywhere-src-5.12.2_web/qtbase/bin/qmake  simbuild.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=Q_OS_LINUX' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
+Makefile_simbuild_web514.qt: simbuild.pro
+ ifdef WEB_QMAKE
+	/opt/qtbase-everywhere-src-5.14.0_web/qtbase/bin/qmake  simbuild.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=Q_OS_LINUX' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
+ else
+	@echo QT Webassembly environment not installed, webassembly program not built
+ endif
 
-Makefile_simbuild_web514.qt:
-	/home/opt2/qtbase-everywhere-src-5.14.0_web/qtbase/bin/qmake  simbuild.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=Q_OS_LINUX' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
+Makefile_simviewer_web514.qt: simviewer.pro
+ ifdef WEB_QMAKE
+	/opt/qtbase-everywhere-src-5.14.0_web/qtbase/bin/qmake  simviewer.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=Q_OS_LINUX' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
+ else
+	@echo QT Webassembly environment not installed, webassembly program not built
+ endif
 
+#	/home/opt2/qtbase-everywhere-src-5.14.0_web/qtbase/bin/qmake  simviewer.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=Q_OS_LINUX' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
 
 Makefile_simviewer.qt: simviewer.pro Makefile.am configure.ac
 	qmake simviewer.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
@@ -280,7 +325,6 @@ Makefile_simrun.qt: simrun.pro Makefile.am
 	qmake simrun.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
 
 Makefile_simmsg.qt: simmsg.pro Makefile.am configure.ac
-	echo "TWO"
 	@echo $(BUILT_SOURCES)
 	qmake simmsg.pro -r 'DEFINES+=VERSION=\\\"$(VERSION)\\\"' 'DEFINES+=DEBUG_OR_NOT=\\\"$(DEBUG_OR_NOT)\\\"'
 

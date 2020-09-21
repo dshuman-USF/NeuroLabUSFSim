@@ -155,6 +155,8 @@ class BaseNode : public QGraphicsItem
       virtual QRectF rect() const = 0;
       virtual void setRect(QRectF&) = 0;
       QGraphicsSimpleTextItem *pop,*comment;
+      int d_idx;
+      int popNum;
 
    private:
       Conn fromLines;
@@ -162,8 +164,6 @@ class BaseNode : public QGraphicsItem
       QPointF sceneOrg;
       QFont itemFont;
       QFontMetrics fontInfo=QFontMetrics(itemFont);
-      int d_idx;
-      int popNum;
 };
 
 

@@ -94,11 +94,13 @@ $pdf_mode = 1; #$
 \pagebreak
 \begin{versionhistory}
    \vhEntry{1.0}{13-Dec-2019}{DS}{Created from sim.tex. Initial release.}
+   \vhEntry{1.1}{10-Jun-2020}{DS}{Add Afferent Signal Fiber Population.}
+   \vhEntry{1.2}{26-aug-2020}{DS}{Add Hebbian Learning Syanpse Support.}
 \end{versionhistory}
 \thispagestyle{empty}
 
 \vglue 0pt plus 1fill
-Copyright (C) 2003,2007,2011,2019 Bruce G. Lindsey, Kendall F. Morris
+Copyright (C) 2003,2007,2011,2019,2020 Bruce G. Lindsey, Kendall F. Morris
 \begin{verbatim}
 Report bugs to <dshuman@usf.edu>
 \end{verbatim}
@@ -638,13 +640,17 @@ and the \tisamp{Lumbar recruitment equation}. See \tiref{Recruitment Equations}.
 \subsubsection{Edit Synapse Types}
 \index{Axon/Synapse!Presynaptic}
 \index{Axon/Synapse!Postsynaptic}
+\index{Axon/Synapse!Learning}
 
 Use the Edit Synapse Types button on the toolbar to add new synapse types.
 These appear in the table beneath the Synapse Parameters page. Use the
-Add Synapse to create a new type. The parameters are documented in
+Add Synapse to create a standard type. Use Add Learn to add a Hebbian
+learning type, documented in \citet{hebb1949organization},
+
+The parameters are documented in
 \tiref{Synapse Type Parameters}.\index{Axon/Synapse!Types}
 
-Each synapse can optionally have a presynaptic and postsynaptic
+Each standard synapse can optionally have a presynaptic and postsynaptic
 modifier. These can be thought of as children of a normal synaptic type.
 These change the behavior of the normal synapse types. The presynaptic
 type modifies conductance changes before they reach the normal synapse.
@@ -660,6 +666,15 @@ A presynaptic or postsynaptic connection to a target cell simultaneously
 affects all the normal connections of the parent normal type to that
 target cell. This means you must add both the normal synaptic type and one
 or both of the modifying types (that is, draw two or three lines.)
+
+The Learn synapse models Hebbian learning. This is based on the 
+LRSYS30 program as documented in 
+\citet{macgregor1987neural}.  Standard synapses use a fixed
+strength. If a learning synapse's target cell fires a short 
+time after receiving a firing event from a sending fiber or cell, 
+the synapse strength is slightly increased up to a maximum value. 
+With the right choice of parameters, the learning can also be inhibitory.
+That is, the synapse strength is decreased down to a minimum value.
 
 
 \subsection{Simulator Launcher Control Window}
@@ -730,11 +745,17 @@ Factor} should be set to 1. \tixref{Power Spectrum}.
 
 The table in the right side of the Launcher Control window contains a list
 of items that will be plotted in a /prog{simviewer} window. There are two
-ways to add a row to this table. The first is to select a cell population
+ways to add a row to this table. The first is to select a cell 
+or fiber population
 in the \prog{simbuild} window and click on the Send to Launcher Simview
 Table.  By default, a random population member is selected. The user can
 edit the member number. The member numbers can be unique or can be the
 same.
+
+The \prog{newsned} program did not plot fiber events. This ability
+has been added to \prog{simbuild}. The events are plotted as vertical 
+lines, except for the afferent fiber type. The plots for this are
+the events, the original signal, or both.
 
 The plot results can be sent directly to \prog{simviewer} or can be
 written to wave files. Using the direct connection is faster but not
@@ -788,12 +809,28 @@ Hybrid IF types get a different list, like so:
 \end{samepage}
 \bigskip
 
+
 If the variable being plotted is \inquotes{Use Bin Width and Scale
 ==\textgreater}, the value being plotted is not specific to any one cell in
 the population. The bin width and scale values are entered in the cells
 to the right of the Plot Variable cell. The vertical size of the plot in
 \prog{simviewer} will be reduced by the indicated factor. The displayed
 spikes/second will still be correct.
+
+If the fiber population is an afferent signal source, this list is used:
+\bigskip
+
+\fbox{
+   \parbox {3.0in} {
+      \begin{description}
+      \item [Events]
+      \item [Signal]
+      \item [Events and Signal]
+   \end{description}
+}
+}
+
+\bigskip
 
 If the lung model is used, since there may be more than one population
 that is used in the lung model and since the lung plots use all of the
@@ -933,15 +970,16 @@ for some entries without the source code.
 The labels used for the parameters in the \ext{snd} file are different in 
 \prog{simbuild} than they are in the \ext{sim} files. In the following sections, each
 parameter is described and the labels used in \prog{simbuild} and in the
-\ext{sim} files, and the variable names used in \ticite{Neural and Brain
-Modeling}, and the symbols used in Breen et al, are given in the following format:
+\ext{sim} files, and the variable names used in \citet {macgregor1987neural},
+and the symbols used in \citet {breenhybrid2003}, are given in 
+the following format:
 
 \begin{flushleft}
 \begin{tabular}{@{}ll@{}}
 SIMBUILD:  &  label used in \prog{simbuild}\\
 SIM:  &  label used in the \ext{sim} file\\
-BREEN: & label used in Breen et al (\tipxref{Breen et al})\\
-VAR:  &  variable name used in{\ticite{Neural and Brain Modeling}}\\
+BREEN: & label used in \citet {breenhybrid2003} \\
+VAR:  &  variable name used in {\citet{macgregor1987neural}} \\
 UNIT:  &  unit of measure for the parameter\\
 TYP:  &  typical values for the parameter\\
 \end{tabular}
@@ -1216,7 +1254,7 @@ conductance on each (virtual) spike.
 \vspace{\baselineskip}
 
 \subsection{Hybrid IF Cell Parameters}
-\label{Hybrid IF Parameters}
+\label{Hybrid Integrate and Fire (IF) Parameters}
 \index{Cell!Parameters!Hybrid IF}
 If cell population type is set to \inquotes{Burster},
 the cell model changes to Hybrid IF. The
@@ -1226,14 +1264,16 @@ Hybrid IF model is derived from the model described in
 J. Butera, Jr., Hybrid integrate-and-fire model of a bursting neuron,
 \ticite{Neural Computation, v.15} n.12, p.2843-2862, December 2003.
 \end{quote}
+
 A set of parameter controls specific to this cell type is displayed
 in \prog{simbuild}.
 
-\noindent The TYP values shown below are from Breen et al. If we have
+\noindent The TYP values shown below are from \citet {breenhybrid2003}. 
+If we have
 used a different value, it is shown in parentheses.
 
 There is no description of these parameters unless the description
-differs from the parameter used in Breen et al.
+differs from the parameter used in \citet {breenhybrid2003}. 
 
 If a parameter that appears on the \prog{simbuild} Cell Population 
 Page for a Hybrid IF population does not appear in this list, it is
@@ -1356,8 +1396,8 @@ UNIT: & millivolts\\
 TYP: & (-37)\\
 \end{tabular}
 \end{flushleft}
-\noindent In Breen et al, this parameter is a function of h. In the simulator,
-it is a constant.
+\noindent In \citet {breenhybrid2003}, this parameter is 
+a function of h. In the simulator, it is a constant.
 \filbreak
 \vspace{2\baselineskip}
 
@@ -1659,8 +1699,104 @@ TYP: &\\
 This specifies the width of the interval in which a firing event centered
 on the frequency time will occur. The offset from the center is random.
 The random number seed is used to seed the random number generator.
-\filbreak
-\vspace{\baselineskip}
+
+
+
+%need 2000
+\subsection{External Afferent Signal Fiber Population Parameters}
+\label{External Afferent Signal Population Parameters}
+\noindent
+This type of fiber population uses a file as an external signal source. At
+this time, this is a CED Spike2 file. A typical example would be a blood
+pressure recording from an experiment, but any type of signal can be used.
+See \tiref{Normal Fiber Parameters} for parameters that are common.  A
+range of expected signal values is mapped to a corresponding range of 
+firing probabilities. Values occurring within a range use the start and
+stop probability values. If they are the same, all values within the range
+have the same probability. If they differ, linear interpolation is used to
+determine the firing probability for each value in the range. Values
+outside of all of the range have a probability of zero. The range must be
+in monotonic increasing order. \prog{Simbuild} will sort the list when changes
+are Applied.
+
+It is intended to eventually provide the means to connect to different
+kinds of sources, such as another simulator that can provide values in
+real time.
+
+
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: & Afferent File\\
+SIM: & afferent\_file\_name\\
+VAR: &\\
+UNIT: & n/a\\
+TYP: &\\
+\end{tabular}
+\end{flushleft}
+This is the name of the .smr or .smrx file containing the signal
+information. This should have a single ADC channel that starts at time
+zero.
+
+
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: & Signal Offset\\
+SIM: & offset\\
+VAR: &\\
+UNIT: & n/a\\
+TYP: &\\
+\end{tabular}
+\end{flushleft}
+The zero value of Y axis in \prog{simviewer} is near the bottom of plot
+rows. Signals that start with values larger or smaller than this
+results in plots that do not use the maximum range of the row. This value
+is used to translate the signal up or down in the plot. For example, if
+the smallest value in a signal file was 100, an offset of -100 would move
+it down in the plot.
+
+
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: & Afferent Value\\
+SIM: & aff\_val\\
+VAR: &\\
+UNIT: & n/a\\
+TYP: &\\
+\end{tabular}
+\end{flushleft}
+
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: & Firing Probability\\
+SIM: & aff\_prob\\
+VAR: &\\
+UNIT: & n/a\\
+TYP: &\\
+\end{tabular}
+\end{flushleft}
+These values/probability pairs are entered into a table 
+in \prog{simbuild}. At least 2
+entries are required, up to a maximum of 32. The user may think of these
+as points in the plane. For example:
+
+(0,0.1) (100,0.3) (140,0.3) (200,0,1)
+
+Any signal value between 0 and 100 would have an interpolated firing
+probability between 0.1 and 0.3. Values between 100 and 140 would have 
+a firing probability of 0.3, and so on.
+
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: implied\\
+SIM: & num\_aff\\
+VAR: &\\
+UNIT: & n/a\\
+TYP: &\\
+\end{tabular}
+\end{flushleft}
+The value/probability arrays are of a fixed size. This is the number of 
+entries in the arrays.
+
 
 %need 3000
 \subsection{Axon/Synapse Parameters}
@@ -1792,6 +1928,8 @@ determines it from the network drawing.
 
 \subsection{Synapse Type Parameters}
 \label{Synapse Type Parameters}
+All of the synapse types have Equilibrium Potential and Time Constant
+parameters. The Hebbian Learing type has several additional ones.
 
 %need 2000
 \begin{flushleft}
@@ -1832,6 +1970,89 @@ exponentially toward 0 with the time constant specified by this
 parameter (except $\tmcode{DCS = e^{\tfrac{-step}{T}}}$).
 \filbreak
 \vspace{\baselineskip}
+
+%need 2000
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: & Learn Window\\
+SIM: & lrnWindow\\
+VAR: & MLAG\\
+UNIT: & ticks\\
+TYP: & 4\\
+\end{tabular}
+\end{flushleft}
+\noindent
+Learning synapes maintain a history list that records the time
+a sending node fired. MacGregor \citet{macgregor1987neural} 
+refers to this as the arrival time.  This parameter determines 
+how many ticks an event will be considered significant. 
+
+This is a per terminal list and the actual value will be a random number
+2-N for each terminal. If a receiving cell fires, it 
+will consult the history list.  If
+there are events in the list, the synapse strength will be modified,
+controlled by parameters listed next. 
+
+At the end of each tick, the 
+arrival time is decremented. When $arrival\ time \le 1$, the
+event is removed from the list. A sender and a receiver firing at
+the same time is not considered a significant event.
+\filbreak
+\vspace{\baselineskip}
+
+%need 2000
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: & Strength Multiplier\\
+SIM: & lrnStrDelta\\
+VAR: & DLSTR\\
+UNIT: & \\
+TYP: & .05-.25\\
+\end{tabular}
+\end{flushleft}
+\noindent
+The synapse strength is modified using this value. If this
+value is positive, the strength is increased up to a maxium value. If it
+is negative, the strength is decreased down to a minium value.  
+
+The initial strength value is set on the Synapse Parameter page. Using
+$strength$ as the starting and subsequent strength value, strength\_max as
+the maximum possible value, using fabs as the floating point absolute
+value function, the equation for the new strength value is: 
+
+\[strength = strength + lrnStrDelta * (fabs(strength\_max - strength))\]
+
+Note that $strength\_max$ can be considered the minimum for lrnStrDelta
+values less than zero.
+
+If $strength = strength\_max$, the modification value 
+becomes zero, so there will no longer be changes to strength.
+\filbreak
+\vspace{\baselineskip}
+fish
+
+%need 2000
+\begin{flushleft}
+\begin{tabular}{@{}ll@{}}
+SIMBUILD: & Max/Min Strength\\
+SIM: & lrnStrMax\\
+VAR: & STRMX\\
+UNIT: & \\
+TYP: & 1-2\\
+\end{tabular}
+\end{flushleft}
+\noindent
+This is the minimum, in the case of negative lrnStrDelta values, or maximum,
+in the case of positive lrnStrDelta values. 
+
+Some parameter combinations may not be
+useful. Starting with a very small initial strength and using a delta
+multiplier that is negative and a larger mimimum value may not have the
+any effect.
+
+\filbreak
+\vspace{\baselineskip}
+
 
 %need 2000
 \begin{flushleft}
@@ -2291,13 +2512,13 @@ on the Edit Globals button to display the Globals page.
 The volume output of the lung model can be use to control the injected
 current of any cell population, thereby creating a pulmonary stretch
 receptor. To do this, simply enter an expression involving the variable
-\ticode{V} (representing lung volume) in the DC Injected Current entry of
-the Cell Population Definition Panel instead of just a number. The
+\ticode{V} (representing lung volume) in the Injected Expresison control 
+the Cell Parameters Panel. The
 simulator will evaluate the expression at every step using the lung
 volume at that step to determine the injected current at that step. If
 no cell population has such an expression, the lung model will not be
 used, which will speed up the simulation, and the lung model outputs
-will not be available for plotting with Snedskop.
+will not be available for plotting with \prog{simviewer}.
 
 For example, if you want an injected current that is proportional to
 lung volume, with 0 at RV, an appropriate expression might be

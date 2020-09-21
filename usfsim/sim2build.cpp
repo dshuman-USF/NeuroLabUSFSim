@@ -979,7 +979,7 @@ void V6GlobalAdjustments()
     // V5 and older V6 files do not have this field. 
     // Keep seconds explicitly now. The # of steps changes
     // depending on the step size, .01, .05, or custom.
-   if (Version >= FILEIO_FORMAT_VERSION6 && D.file_subversion == 0) // older v6 
+   if (Version <= FILEIO_FORMAT_VERSION6 && D.file_subversion == 0) // older v6 
       D.inode[GLOBAL_INODE].unode.global_node.sim_length_seconds = 
          D.inode[GLOBAL_INODE].unode.global_node.sim_length/1000.0 *
          D.inode[GLOBAL_INODE].unode.global_node.step_size;
@@ -1025,8 +1025,6 @@ void V6CellAdjustments()
 // Added in a pop_subtype for fiber. It will be zero
 // in .snd files that do not have it. This means pop subtype
 // is normal fiber. 
-// Moved from start and stop times in ticks to milliseconds because
-// if you change the tick value, the start and stop moves around.
 void V6FiberAdjustments()
 {
    if (Version >= FILEIO_FORMAT_VERSION6 && D.file_subversion == 0) // older v6 
@@ -1148,15 +1146,11 @@ save_scr (char *sndfile)
 {
   char *scrfile = strdup (sndfile); // where is this freed?
   char *filetype = strrchr (scrfile, '.');
-printf("%s\n",filetype);
+
   FILE  *f;
   int n;
   char header[80]; 
   int pos = 1;
-
-printf("%d\n",strcmp (filetype, ".snd"));
-printf("%d\n",strcmp (filetype, ".sim"));
-
 
   strcpy (filetype, ".ols");
   if ((f = fopen (scrfile, "w")) == 0) {
@@ -1256,6 +1250,7 @@ void Save_sim (char *savename, char* sndname)
   save_scr (savename);
   memset(&S,0,sizeof(S));  // values passed in here
 
+  S.file_subversion   = FILEIO_SUBVERSION_CURRENT;
   S.net.fiberpop_count = gn->total_fibers;
   S.net.cellpop_count  = gn->total_cells;
   S.step_count         = gn->sim_length;
@@ -1278,6 +1273,9 @@ void Save_sim (char *savename, char* sndname)
        S.net.syntype[n].EQ = 0;
        S.net.syntype[n].DCS = 0;
        S.net.syntype[n].PARENT = 0;
+       S.net.syntype[n].lrnStrDelta = 0;
+       S.net.syntype[n].lrnStrMax = 0;
+       S.net.syntype[n].lrnWindow = 0;
        S.net.syntype[n].SYN_TYPE = SYN_NORM; // needs the type, even if not used
        continue;
     }
@@ -1285,6 +1283,9 @@ void Save_sim (char *savename, char* sndname)
     S.net.syntype[n].DCS = exp (-S.step / D.inode[SYNAPSE_INODE].unode.synapse_node.s_time_constant[n+1]);
     S.net.syntype[n].SYN_TYPE = D.inode[SYNAPSE_INODE].unode.synapse_node.syn_type[n+1];
     S.net.syntype[n].PARENT = D.inode[SYNAPSE_INODE].unode.synapse_node.parent[n+1];
+    S.net.syntype[n].lrnWindow = D.inode[SYNAPSE_INODE].unode.synapse_node.lrn_window[n+1];
+    S.net.syntype[n].lrnStrMax = D.inode[SYNAPSE_INODE].unode.synapse_node.lrn_maxstr[n+1];
+    S.net.syntype[n].lrnStrDelta = D.inode[SYNAPSE_INODE].unode.synapse_node.lrn_delta[n+1];
   }
 
    S.net.fiberpop = (FiberPop*) calloc(S.net.fiberpop_count,sizeof *(S.net.fiberpop));
@@ -1310,7 +1311,15 @@ void Save_sim (char *savename, char* sndname)
             fp->pop_subtype     = fn->pop_subtype;
             fp->freq_type       = fn->freq_type;
             fp->frequency       = fn->frequency;
-            fp->fuzzy_range     = fn->fuzzy_range;
+            fp->offset          = fn->offset;
+            if (strlen(fn->afferent_file))
+               fp->afferent_file_name = strdup(fn->afferent_file);
+            else
+               fp->afferent_file_name = nullptr;
+            memcpy(fp->aff_val, fn->aff_val, sizeof(fp->aff_val));
+            memcpy(fp->aff_prob, fn->aff_prob, sizeof(fp->aff_prob));
+            fp->num_aff = fn->num_aff;
+
             fp->targetpop = (TargetPop *) malloc(fp->targetpop_count * sizeof *(fp->targetpop));
             int idx=0;
             int expected=fn->f_targets;

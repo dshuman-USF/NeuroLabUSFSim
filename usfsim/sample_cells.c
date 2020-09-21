@@ -216,10 +216,13 @@ static void
 unique (void)
 {
   int n, to;
-  for (to = 0, n = 1; n < sample_cell_count; n++)
-    if (memcmp (&sample_cell[n], &sample_cell[to], sizeof sample_cell[n]) != 0)
-      sample_cell[++to] = sample_cell[n];
-  sample_cell_count = to + 1;
+  if (sample_cell_count)
+  {
+    for (to = 0, n = 1; n < sample_cell_count; n++)
+      if (memcmp (&sample_cell[n], &sample_cell[to], sizeof sample_cell[n]) != 0)
+        sample_cell[++to] = sample_cell[n];
+    sample_cell_count = to + 1;
+  }
 }
 
 void
@@ -238,8 +241,12 @@ find_sample_cells (void)
           if ( S.net.cellpop[pn].targetpop[tn].NT > 0)
             connection_count++;
       }
+    if (connection_count) {  
     connection = malloc (connection_count * sizeof *connection);
     connection_idx = 0;
+    }
+    else
+      connection = 0;
     printf ("%d connections\n", connection_count);
   }
 

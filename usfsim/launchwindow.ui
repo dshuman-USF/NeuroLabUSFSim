@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1912</width>
-    <height>1126</height>
+    <width>1908</width>
+    <height>1004</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -274,7 +274,7 @@ font-style:bold
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3" stretch="4,24">
+        <layout class="QVBoxLayout" name="verticalLayout_3" stretch="6,24">
          <property name="spacing">
           <number>0</number>
          </property>
@@ -610,7 +610,7 @@ For bdt and smr Files</string>
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="4,24">
+        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="6,24">
          <property name="spacing">
           <number>0</number>
          </property>
